@@ -1,0 +1,83 @@
+model {
+  for(i in 1:N) {
+    V1[i] ~ dnorm(mu[i,1], 1/theta[1,1,g[i]])
+    V2[i] ~ dnorm(mu[i,2], 1/theta[2,2,g[i]])
+    V3[i] ~ dnorm(mu[i,3], 1/theta[3,3,g[i]])
+    V4[i] ~ dnorm(mu[i,4], 1/theta[4,4,g[i]])
+    V5[i] ~ dnorm(mu[i,5], 1/theta[5,5,g[i]])
+    V6[i] ~ dnorm(mu[i,6], 1/theta[6,6,g[i]])
+
+    # lvs
+    eta[i,1] ~ dnorm(mu_eta[i,1], 1/psistar[1,1,g[i]])
+    eta[i,2] ~ dnorm(mu_eta[i,2], 1/psistar[2,2,g[i]])
+    eta[i,3] ~ dnorm(mu_eta[i,3], 1/psi[3,3,g[i]])
+  }
+
+  # mu definitions
+  for(i in 1:N) {
+    mu[i,1] <- nu[1,1,g[i]] + lambda[1,1,g[i]]*eta[i,1]
+    mu[i,2] <- nu[2,1,g[i]] + lambda[2,1,g[i]]*eta[i,1]
+    mu[i,3] <- nu[3,1,g[i]] + lambda[3,1,g[i]]*eta[i,1]
+    mu[i,4] <- nu[4,1,g[i]] + lambda[4,2,g[i]]*eta[i,2]
+    mu[i,5] <- nu[5,1,g[i]] + lambda[5,2,g[i]]*eta[i,2]
+    mu[i,6] <- nu[6,1,g[i]] + lambda[6,2,g[i]]*eta[i,2]
+
+    mu_eta[i,1] <- alpha[1,1,g[i]] + beta[1,1,g[i]]*eta[i,3]
+    mu_eta[i,2] <- alpha[2,1,g[i]] + beta[2,2,g[i]]*eta[i,3]
+    mu_eta[i,3] <- 0
+  }
+
+  # Assignments from parameter vector & equality constraints
+  lambda[1,1,1] <- parvec[1]
+  lambda[2,1,1] <- parvec[2]
+  lambda[3,1,1] <- parvec[3]
+  lambda[4,2,1] <- parvec[4]
+  lambda[5,2,1] <- parvec[5]
+  lambda[6,2,1] <- parvec[6]
+  theta[1,1,1] <- pow(parvec[7],-1)
+  theta[2,2,1] <- pow(parvec[8],-1)
+  theta[3,3,1] <- pow(parvec[9],-1)
+  theta[4,4,1] <- pow(parvec[10],-1)
+  theta[5,5,1] <- pow(parvec[11],-1)
+  theta[6,6,1] <- pow(parvec[12],-1)
+  psistar[1,1,1] <- psi[1,1,1] - (sqrt(abs(lvrho[1,2,1])*psi[1,1,1]))^2
+  psistar[2,2,1] <- psi[2,2,1] - ((-1 + 2*step(lvrho[1,2,1]))*sqrt(abs(lvrho[1,2,1])*psi[2,2,1]))^2
+  lvrho[1,2,1] <- -1 + 2*parvec[13]
+  nu[1,1,1] <- parvec[14]
+  nu[2,1,1] <- parvec[15]
+  nu[3,1,1] <- parvec[16]
+  nu[4,1,1] <- parvec[17]
+  nu[5,1,1] <- parvec[18]
+  nu[6,1,1] <- parvec[19]
+  alpha[1,1,1] <- 0
+  alpha[2,1,1] <- 0
+  beta[1,1,1] <- sqrt(abs(lvrho[1,2,1])*psi[1,1,1])
+  beta[2,2,1] <- (-1 + 2*step(lvrho[1,2,1]))*sqrt(abs(lvrho[1,2,1])*psi[2,2,1])
+  psi[3,3,1] <- 1
+  psi[1,1,1] <- 1
+  psi[2,2,1] <- 1
+
+  # Inferential covariances
+  psi[1,2,1] <- beta[1,1,1]*beta[2,2,1]*psi[3,3,1]
+
+  # Priors
+  parvec[1] ~ dnorm(0,1e-2)
+  parvec[2] ~ dnorm(0,1e-2)
+  parvec[3] ~ dnorm(0,1e-2)
+  parvec[4] ~ dnorm(0,1e-2)
+  parvec[5] ~ dnorm(0,1e-2)
+  parvec[6] ~ dnorm(0,1e-2)
+  parvec[7] ~ dgamma(1,.5)
+  parvec[8] ~ dgamma(1,.5)
+  parvec[9] ~ dgamma(1,.5)
+  parvec[10] ~ dgamma(1,.5)
+  parvec[11] ~ dgamma(1,.5)
+  parvec[12] ~ dgamma(1,.5)
+  parvec[13] ~ dbeta(1,1)
+  parvec[14] ~ dnorm(0,1e-3)
+  parvec[15] ~ dnorm(0,1e-3)
+  parvec[16] ~ dnorm(0,1e-3)
+  parvec[17] ~ dnorm(0,1e-3)
+  parvec[18] ~ dnorm(0,1e-3)
+  parvec[19] ~ dnorm(0,1e-3)
+}
