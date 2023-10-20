@@ -2,13 +2,20 @@
 
 https://stackoverflow.com/questions/107701/how-can-i-remove-ds-store-files-from-a-git-repository
 
+https://osf.io/afkcw/files/osfstorage
+(resources from author)
+
+https://stats.stackexchange.com/questions/532019/how-to-get-rmsea-cfi-of-blavaan-object-in-r
+(blavaan all 7 indicies) IMPORTANT
+https://ecmerkle.github.io/blavaan/reference/blavFitIndices.html
+(blavaan all 7 indicies) IMPORTANT
+https://ecmerkle.github.io/blavaan/articles/approx_fi.html
+(blavaan all 7 indicies) IMPORTANT
 
 
-
-
-
-
-
+(STAN LINKS) IMPORTANT
+https://www.r-bloggers.com/2019/01/an-introduction-to-stan-with-r/
+https://www.rdocumentation.org/packages/rstan/versions/2.26.23/topics/stan
 
 
 
@@ -22,6 +29,9 @@ https://stackoverflow.com/questions/107701/how-can-i-remove-ds-store-files-from-
 
 
 
+####### additional
+https://mc-stan.org/users/documentation/case-studies/sem.html
+https://ecmerkle.github.io/blavaan/articles/summaries.html
 
 
 

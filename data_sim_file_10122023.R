@@ -12,39 +12,24 @@ packageVersion("blavaan")
 packageVersion("rjags")
 packageVersion("rstan")
 
-# BNFI
-# BTLI
-# BCFI
-# BMc       (Found)
-# BΓadj     (Found)
-# BΓˆ       (Found)
-# BRMSEA    (Found)
-# D(θ ̄)  already in BRMSEA 
-# pDLOO
-# PPPχ2
+# BNFI, BTLI, BCFI, BMc, BΓadj, BΓˆ, BRMSEA //// PPPχ2
 ###########################################
 # generate real data
 ###########################################
-# lv
+set.seed(1024)
 N <- 250
 phi <- diag(2)
 eta <- rmvnorm(N,sigma=phi)
 epsilon <- rmvnorm(N,sigma=diag(6))
 lambda <- matrix(c(1,1,1,0,0,0,
-                   0,0,0,1,1,1),6,2,byrow=F)
-# misspecify lambda -> 1 where a zero is (one of them)
-#observed data
-x <- eta%*%t(lambda)+epsilon
+                   0,0,0,1,1,1),6,2,byrow=F) # misspecify lambda -> 1 where a zero is (one of them)
+x <- eta%*%t(lambda)+epsilon #observed data
 ###########################################
 # generate fake data
 ###########################################
-# lv
 lambda_fake <- matrix(c(1,1,1,0,0,0,
                    1,0,0,1,1,1),6,2,byrow=F)
-# misspecify lambda -> 1 where a zero is (one of them)
-#observed data
-x_fake <- eta%*%t(lambda_fake)+epsilon
-
+x_fake <- eta%*%t(lambda_fake)+epsilon#observed data
 ###########################################
 # data analysis with real data
 ###########################################
@@ -54,108 +39,113 @@ eta1 =~ V1+V2+V3
 eta2 =~ V4+V5+V6
 '
 # run the bayesian model
-res1 <- bsem(model, data=as.data.frame(x),#target="jags",
+res1 <- bsem(model, data=as.data.frame(x),#target="jags",     ##################CORRECTLY SCPECIFIED????
              burnin = 1000, n.chains = 4, sample = 1000,
              mcmcfile = "model1", std.lv = TRUE) # this is wrong
 # extract model fit
-res1
+res1 # summary(res1)
 '
   Statistic                                 MargLogLik         PPP
-  Value                                      -2501.918       0.558
+  Value                                             NA       0.540
 '
-summary(res1)
 blavFitIndices(res1)
 '
 Posterior mean (EAP) of devm-based fit indices:
 
       BRMSEA    BGammaHat adjBGammaHat          BMc 
-       0.016        0.998        0.994        0.997 
+       0.017        0.998        0.994        0.997 
 '
+#+++++++++++++++++++++++++++++++++
+# https://stats.stackexchange.com/questions/532019/how-to-get-rmsea-cfi-of-blavaan-object-in-r
+fit1_REAL_INDICIES <- bcfa(model, data = as.data.frame(x),
+             n.chains = 4, burnin = 1000, sample = 1000)
+null.model <- c(paste0("V", 1:6, " ~~ V", 1:6), paste0("V", 1:6, " ~ 1"))
+fit0_REAL_INDICIES <- bcfa(null.model, data = as.data.frame(x),
+             n.chains = 4, burnin = 1000, sample = 1000)
 
+blavFitIndices(fit1_REAL_INDICIES, baseline.model = fit0_REAL_INDICIES)
+'
+Posterior mean (EAP) of devm-based fit indices:
+
+      BRMSEA    BGammaHat adjBGammaHat          BMc         BCFI         BTLI         BNFI 
+       0.018        0.998        0.993        0.996        0.995        1.001        0.981 
+Warning message:
+'
+#+++++++++++++++++++++++++++++++++
 # 2nd model: jags
 # 3rd model: stan
-scode <- "
+stan_data <- list(
+  N=N,
+  x=x
+)
+
+stan_model_code <- '
+data {
+  int<lower=0> N;
+  matrix[N, 6] x;  
+}
+
 parameters {
-  real y[2];
+  vector[3] eta1;
+  vector[3] eta2;
+  real<lower=0> sigma;
 }
+
 model {
-  y[1] ~ normal(0, 1);
-  y[2] ~ double_exponential(0, 2);
+  eta1 ~ normal(0, 1);
+  eta2 ~ normal(0, 1);
+  for (i in 1:N) {
+    x[i, 1:3] ~ normal(eta1, sigma);
+    x[i, 4:6] ~ normal(eta2, sigma);
+  }
 }
-"
+'
+fit1 <- stan(model_code = stan_model_code, iter = 1000, verbose = FALSE, data=stan_data     ) 
+posterior_samples <- extract(fit1)
+posterior_samples
+fit_indices <- blavFitIndices(posterior_samples$eta1, posterior_samples$eta2)
+posterior_samples$eta1
+print(fit_indices)
+eta
 
-
-# scode <-"
-# data {
-#   int<lower=0> N; // Number of observations
-#   int<lower=0> K; // Number of items (variables)
-#   matrix[N, K] Y; // Observed data
-# }
-# 
-# parameters {
-#   matrix[K, K] L; // Factor loadings
-#   vector[K] mu;   // Factor means
-#   vector<lower=0>[K] sigma; // Residual standard deviations
-# }
-# 
-# model {
-#   // Prior distributions for the model parameters
-#   L ~ normal(0, 2);  // Priors for factor loadings
-#   mu ~ normal(0, 5); // Priors for factor means
-#   sigma ~ cauchy(0, 5); // Priors for residual standard deviations
-# 
-#   // Likelihood: CFA model
-#   for (n in 1:N) {
-#     Y[n] ~ multi_normal(mu + L * (eta1[n] - eta2[n]), diag_matrix(sigma));
-#   }
-# }
-# 
-# generated quantities {
-#   vector[K] eta1[N]; // Latent variable scores for eta1
-#   vector[K] eta2[N]; // Latent variable scores for eta2
-#   for (n in 1:N) {
-#     eta1[n] = mu + L * eta1[n];
-#     eta2[n] = mu + L * eta2[n];
-#   }
-# }
-# "
-fit1 <- stan(model_code = scode, iter = 10, verbose = FALSE)
-print(fit1)
-fit2 <- stan(fit = fit1, iter = 10000, verbose = FALSE)
 ###########################################
 # data analysis with fake data
 ###########################################
-
 # run the bayesian model
 res2 <- bsem(model, data=as.data.frame(x_fake),# target="jags",
              burnin = 1000, n.chains = 4, sample = 1000,
              mcmcfile = "model1",std.lv = TRUE) # this is wrong
-# extract model fit
-res2
+res2 #summary(res2), blavInspect(res2, 'neff'), blavInspect(res2, 'rhat')
 '
   Statistic                                 MargLogLik         PPP
-  Value                                      -2552.209       0.000
+  Value                                             NA       0.000
 '
-summary(res2)
-
-
-blavInspect(res2, 'rhat')
-blavInspect(res2, 'neff')
-fitMeasures(res2)
-
 blavFitIndices(res2)
 
 '
       BRMSEA    BGammaHat adjBGammaHat          BMc 
-       0.182        0.917        0.787        0.873 
+       0.208        0.907        0.726        0.857 
 '
 
-fitmeasures(res2)
+#+++++++++++++++++++++++++++++++++
+fit1_FAKE_INDICIES <- bcfa(model, data = as.data.frame(x_fake), 
+                           n.chains = 4, burnin = 1000, sample = 1000)
+null.model <- c(paste0("V", 1:6, " ~~ V", 1:6), paste0("V", 1:6, " ~ 1"))
+fit0_FAKE_INDICIES <- bcfa(null.model, data = as.data.frame(x_fake),
+                           n.chains = 4, burnin = 1000, sample = 1000)
 
+blavFitIndices(fit1_FAKE_INDICIES, baseline.model = fit0_FAKE_INDICIES)
+
+'
+Posterior mean (EAP) of devm-based fit indices:
+
+      BRMSEA    BGammaHat adjBGammaHat          BMc         BCFI         BTLI         BNFI 
+       0.210        0.907        0.721        0.857        0.820        0.760        0.808 
+Warning message:
+'
+#+++++++++++++++++++++++++++++++++
 
 # 2nd model: jags
-
-
 # 3rd model: stan
 
 
@@ -163,16 +153,14 @@ fitmeasures(res2)
 '
 Questions to ask:
 1) How to make BRMSEA  non NaN?
-2) Are four indicies enough for the project?
 3) Am I doing it correctly so far?
 4) issue with jags instalation
 5) cloud tempo Solution?
-
+6) Group Partner
+7) # fitmeasures(res2) is not working anymore? 
+8) Stan Solution problematic? not sure if correct, several resources were used.
 
 What to do for Step 1 Project:
-1) Garnier Paper read again
-2) Second Paper
-3) 01_cfa go through
 4) Stan write the code
 
 ''
