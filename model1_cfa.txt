@@ -1,0 +1,57 @@
+model{
+  ################################
+  # model
+  ################################
+  
+  # specify for each person 1...N
+  for(i in 1:N){
+     # distribution for each observed indicator variable 1...6
+     for(j in 1:6){
+       y[i,j] ~ dnorm(mu.y[i,j],psi.eps[j])
+     }
+     
+     # mean structure using the first indicator per factor for scaling
+     # eta1
+     mu.y[i,1] <-       eta[i,1]
+     mu.y[i,2] <- ly[1]*eta[i,1]
+     mu.y[i,3] <- ly[2]*eta[i,1]
+     
+     # eta2
+     mu.y[i,4] <-       eta[i,2]
+     mu.y[i,5] <- ly[3]*eta[i,2]
+     mu.y[i,6] <- ly[4]*eta[i,2]
+     
+     # distribution of latent variables
+     # with mu.eta=c(0,0)
+     eta[i,1:2] ~ dmnorm(mu.0[1:2],phi.eta[1:2,1:2])
+  }
+  
+  ################################
+  # priors
+  ################################
+  # factor loadings
+  for(k in 1:4){
+    ly[k] ~ dnorm(0,1)
+  }
+  
+  # precisions = 1/variance
+  for(k in 1:6){
+    psi.eps[k] ~ dgamma(1,1)
+  }
+  
+  # precision matrix
+  # with hyperprior phi.0=diag(2)
+  phi.eta[1:2,1:2] ~ dwish(phi.0,2)
+  
+  ################################
+  # transformations: variances, covariances
+  ################################
+  for(k in 1:6){
+    sigma.eps[k] <- 1/psi.eps[k]
+  }
+  
+  sigma.eta[1:2,1:2] <- inverse(phi.eta[1:2,1:2])
+  
+ 
+
+}
