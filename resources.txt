@@ -18,7 +18,8 @@ https://www.r-bloggers.com/2019/01/an-introduction-to-stan-with-r/
 https://www.rdocumentation.org/packages/rstan/versions/2.26.23/topics/stan
 
 
-
+R2jags	
+https://agabrioblog.onrender.com/tutorial/gof-tests-jags/gof-tests-jags/
 ######################################### writing
 
 
