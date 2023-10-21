@@ -9,9 +9,7 @@ library(R2jags)
 # library(blavaan) # standard package
 # library(rstan)
 library(mvtnorm) # mv normal data
-packageVersion("blavaan")
 packageVersion("rjags")
-packageVersion("rstan")
 
 # BNFI, BTLI, BCFI, BMc, BΓadj, BΓˆ, BRMSEA //// PPPχ2
 ###########################################
