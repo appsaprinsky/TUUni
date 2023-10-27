@@ -20,6 +20,9 @@ https://www.rdocumentation.org/packages/rstan/versions/2.26.23/topics/stan
 
 R2jags	
 https://agabrioblog.onrender.com/tutorial/gof-tests-jags/gof-tests-jags/
+
+
+
 ######################################### writing
 
 
@@ -33,6 +36,27 @@ https://agabrioblog.onrender.com/tutorial/gof-tests-jags/gof-tests-jags/
 ####### additional
 https://mc-stan.org/users/documentation/case-studies/sem.html
 https://ecmerkle.github.io/blavaan/articles/summaries.html
+
+
+
+
+
+################### Website
+https://posit.cloud/content/yours?sort=name_asc
+
+
+################## Unknown
+
+https://www.weirdfishes.blog/blog/fitting-bayesian-models-with-stan-and-r/
+https://www.mzes.uni-mannheim.de/socialsciencedatalab/article/applied-bayesian-statistics/#validation-and-inference
+https://link.springer.com/article/10.3758/s13428-023-02121-5
+https://agabrioblog.onrender.com/tutorial/gof-tests-jags/gof-tests-jags/
+https://cran.r-project.org/web/packages/blavaan/blavaan.pdf
+
+
+
+
+
 
 
 

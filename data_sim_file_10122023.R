@@ -1,11 +1,11 @@
 # install.packages("rstan")
 # install.packages("R2jags")
-install.packages("rjags")
+# install.packages("rjags")
 # install.packages("blavaan")
 # install.packages("mvtnorm")
 
-library(rjags) # issue with jags instalation
-library(R2jags)
+# library(rjags) # issue with jags instalation
+# library(R2jags)
 library(blavaan) # standard package
 library(rstan)
 library(mvtnorm) # mv normal data
@@ -40,7 +40,7 @@ eta1 =~ V1+V2+V3
 eta2 =~ V4+V5+V6
 '
 # run the bayesian model
-res1 <- bsem(model, data=as.data.frame(x),#target="jags",     ##################CORRECTLY SCPECIFIED????
+res1 <- bsem(model, data=as.data.frame(x),#target="jags",     ##################COnvergence rate , rhat stat 1, ess above 400
              burnin = 1000, n.chains = 4, sample = 1000,
              mcmcfile = "model1", std.lv = TRUE) # this is wrong
 # extract model fit
@@ -78,15 +78,14 @@ Warning message:
 data.jags <- list(N=N,           #sample size
                   y=x,         #data
                   mu.0=c(0,0),   #zero-vector
-                  phi=phi) #diagonal matrix
+                  phi.0=phi) #diagonal matrix
 
 params <- c("ly","sigma.eps","sigma.eta")
 model_real_jags <- jags.parallel(data=data.jags, 
-                        parameters.to.save=params,
-                        n.iter=2000, n.chains=4,n.thin=1,n.burnin = 1000,
-                        model.file="model1_cfa.txt")
+                                 parameters.to.save=params,
+                                 n.iter=2000, n.chains=4,n.thin=1,n.burnin = 1000,
+                                 model.file="model1_cfa.txt")
 model_real_jags
-est1 <- model_real_jags$BUGSoutput$summary
 
 # 3rd model: stan
 stan_data <- list(
@@ -94,50 +93,106 @@ stan_data <- list(
   x=x
 )
 
+# stan_model_code <- '
+# data {
+#   int<lower=0> N;
+#   matrix[N, 6] x;
+# }
+# 
+# parameters {
+#   vector[3] eta1;
+#   vector[3] eta2;
+#   real<lower=0> sigma;
+# }
+# 
+# model {
+#   eta1 ~ normal(0, 10);
+#   eta2 ~ normal(0, 10);
+#   for (i in 1:N) {
+#     x[i, 1:3] ~ normal(eta1, sigma);
+#     x[i, 4:6] ~ normal(eta2, sigma);
+#   }
+# }
+# 
+# generated quantities {
+# 
+#   /* define predictions and residuals */
+#   vector[N] y_hat;
+#   vector[N] resid;
+# 
+#   /* calculate predictions and residuals */
+#   y_hat = X * beta;
+#   resid = y - y_hat;
+# 
+# }
+# 
+# '
 stan_model_code <- '
 data {
   int<lower=0> N;
-  matrix[N, 6] x;  
+  matrix[N, 6] x; 
+  vector[4] ly;
 }
 
 parameters {
-  vector[3] eta1;
-  vector[3] eta2;
-  real<lower=0> sigma;
+  matrix[N, 2]  eta;
+  vector<lower=0>[6] sigma; 
+  cov_matrix[2] phi_eta; 
+  vector[2] mu_0; 
+  
+  // real<lower=0> sigma[6];
 }
 
-model {
-  eta1 ~ normal(0, 10);
-  eta2 ~ normal(0, 10);
+transformed parameters {
+  matrix[N, 6] mu_x;
+  
+
   for (i in 1:N) {
-    x[i, 1:3] ~ normal(eta1, sigma);
-    x[i, 4:6] ~ normal(eta2, sigma);
+    mu_x[i, 1] = eta[i, 1];
+    mu_x[i, 2] = ly[1]*eta[i, 1];
+    mu_x[i, 3] = ly[2]*eta[i, 1];
+
+    mu_x[i, 4] = eta[i, 2];
+    mu_x[i, 5] = ly[3]*eta[i, 2];
+    mu_x[i, 6] = ly[4]*eta[i, 2];
   }
 }
 
-generated quantities {
-  
-  /* define predictions and residuals */
-  vector[N] y_hat;
-  vector[N] resid;
-  
-  /* calculate predictions and residuals */
-  y_hat = X * beta;
-  resid = y - y_hat;
-  
+
+model {
+  for (i in 1:N) {
+    for (j in 1:6) {
+      x[i,j] ~ normal(mu_x[i,j], sigma[j]);
+    }
+    
+    eta[i, 1:2] ~ multi_normal(mu_0,phi_eta);
+    
+  }
+  // phi_eta[1, 2] = phi_eta[2, 1];
 }
 
 '
 
-find.package('rstan')
-model_real_stan <- stan(model_code = stan_model_code, iter = 1000, verbose = FALSE, data=stan_data ) 
+
+
+
+stan_data <- list(
+  N=N,
+  x=x,
+  ly=c(0,0, 0, 0)
+)
+
+
+# find.package('rstan')
+model_real_stan <- stan(model_code = stan_model_code, iter = 10, verbose = FALSE, data=stan_data )
 posterior_samples <- extract(model_real_stan)
 posterior_samples
 fit_indices <- blavFitIndices(posterior_samples$eta1, posterior_samples$eta2)
 posterior_samples$eta1
 print(fit_indices)
 
-
+# https://discourse.mc-stan.org/t/covariance-matrix-not-symmetric-for-lkj-prior/20932
+# https://discourse.mc-stan.org/t/covariance-matrix-not-symmetric/29824/2
 
 ###########################################
 # data analysis with fake data
@@ -177,6 +232,17 @@ Warning message:
 #+++++++++++++++++++++++++++++++++
 
 # 2nd model: jags
+data.jags <- list(N=N,           #sample size
+                  y=x_fake,         #data
+                  mu.0=c(0,0),   #zero-vector
+                  phi.0=phi) #diagonal matrix
+
+params <- c("ly","sigma.eps","sigma.eta")
+model_real_jags <- jags.parallel(data=data.jags, 
+                                 parameters.to.save=params,
+                                 n.iter=2000, n.chains=4,n.thin=1,n.burnin = 1000,
+                                 model.file="model1_cfa.txt")
+model_real_jags
 # 3rd model: stan
 
 
@@ -184,18 +250,9 @@ Warning message:
 '
 Questions to ask:
 1) How to make BRMSEA  non NaN?
-3) Am I doing it correctly so far?
-4) issue with jags instalation
-5) cloud tempo Solution?
-6) Group Partner
-7) # fitmeasures(res2) is not working anymore? 
-8) Stan Solution problematic? not sure if correct, several resources were used.
-9) Feeling the Form
-
-What to do for Step 1 Project:
-4) Stan write the code
-
-''
+2) Am I doing it correctly so far?
+3) # fitmeasures(res2) is not working anymore? 
+'
 
 
 
