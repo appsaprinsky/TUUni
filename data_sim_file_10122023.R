@@ -93,60 +93,33 @@ stan_data <- list(
   x=x
 )
 
-# stan_model_code <- '
-# data {
-#   int<lower=0> N;
-#   matrix[N, 6] x;
-# }
-# 
-# parameters {
-#   vector[3] eta1;
-#   vector[3] eta2;
-#   real<lower=0> sigma;
-# }
-# 
-# model {
-#   eta1 ~ normal(0, 10);
-#   eta2 ~ normal(0, 10);
-#   for (i in 1:N) {
-#     x[i, 1:3] ~ normal(eta1, sigma);
-#     x[i, 4:6] ~ normal(eta2, sigma);
+# generated quantities {
+#   vector[N] log_lik;
+#   
+#   for (n in 1:N) {
+#   log_lik[n] = normal_lpdf(y[n] | X[n, ] * beta, sigma);
 #   }
 # }
-# 
-# generated quantities {
-# 
-#   /* define predictions and residuals */
-#   vector[N] y_hat;
-#   vector[N] resid;
-# 
-#   /* calculate predictions and residuals */
-#   y_hat = X * beta;
-#   resid = y - y_hat;
-# 
-# }
-# 
-# '
+
+#######################################STAN CODE###########################
 stan_model_code <- '
 data {
   int<lower=0> N;
   matrix[N, 6] x; 
-  vector[4] ly;
+  // vector[4] ly;
 }
 
 parameters {
   matrix[N, 2]  eta;
-  vector<lower=0>[6] sigma; 
-  cov_matrix[2] phi_eta; 
+  vector<lower=0>[6] epsilon; 
+  cov_matrix[2] sigma; 
   vector[2] mu_0; 
-  
-  // real<lower=0> sigma[6];
+  vector[4] ly;
 }
 
 transformed parameters {
   matrix[N, 6] mu_x;
   
-
   for (i in 1:N) {
     mu_x[i, 1] = eta[i, 1];
     mu_x[i, 2] = ly[1]*eta[i, 1];
@@ -158,38 +131,41 @@ transformed parameters {
   }
 }
 
-
 model {
   for (i in 1:N) {
     for (j in 1:6) {
-      x[i,j] ~ normal(mu_x[i,j], sigma[j]);
+      x[i,j] ~ normal(mu_x[i,j], epsilon[j]);
     }
-    
-    eta[i, 1:2] ~ multi_normal(mu_0,phi_eta);
-    
+    eta[i, 1:2] ~ multi_normal(mu_0,sigma);
   }
-  // phi_eta[1, 2] = phi_eta[2, 1];
 }
 
 '
 
 
-
+#######################################STAN CODE###########################
 
 stan_data <- list(
   N=N,
-  x=x,
-  ly=c(0,0, 0, 0)
+  x=x
+  # ly=c(1,1, 1, 1)
 )
 
 
 # find.package('rstan')
-model_real_stan <- stan(model_code = stan_model_code, iter = 10, verbose = FALSE, data=stan_data )
+model_real_stan <- stan(model_code = stan_model_code, iter = 1000, verbose = FALSE, data=stan_data )
 posterior_samples <- extract(model_real_stan)
 posterior_samples
-fit_indices <- blavFitIndices(posterior_samples$eta1, posterior_samples$eta2)
-posterior_samples$eta1
-print(fit_indices)
+
+posterior_samples$eta
+posterior_samples$sigma
+posterior_samples$epsilon
+posterior_samples$mu_0
+posterior_samples$mu_x
+posterior_samples$ly
+
+# fit_indices <- blavFitIndices(model_real_stan)
+# print(fit_indices)
 
 # https://discourse.mc-stan.org/t/covariance-matrix-not-symmetric-for-lkj-prior/20932
 # https://discourse.mc-stan.org/t/covariance-matrix-not-symmetric/29824/2
