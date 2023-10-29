@@ -9,6 +9,7 @@
 library(blavaan) # standard package
 library(rstan)
 library(mvtnorm) # mv normal data
+source("functions_for_blavaan.R")
 packageVersion("blavaan")
 packageVersion("rjags")
 packageVersion("rstan")
@@ -93,14 +94,6 @@ stan_data <- list(
   x=x
 )
 
-# generated quantities {
-#   vector[N] log_lik;
-#   
-#   for (n in 1:N) {
-#   log_lik[n] = normal_lpdf(y[n] | X[n, ] * beta, sigma);
-#   }
-# }
-
 #######################################STAN CODE###########################
 stan_model_code <- '
 data {
@@ -140,7 +133,17 @@ model {
   }
 }
 
+generated quantities {
+  vector[N] log_lik;
+  for (i in 1:N) {
+    log_lik[i] = 0;
+    for (j in 1:6) {
+      log_lik[i] += normal_lpdf(x[i,j] | mu_x[i,j], epsilon[j]);
+    }
+  }
+}
 '
+
 
 
 #######################################STAN CODE###########################
@@ -156,6 +159,8 @@ stan_data <- list(
 model_real_stan <- stan(model_code = stan_model_code, iter = 1000, verbose = FALSE, data=stan_data )
 posterior_samples <- extract(model_real_stan)
 posterior_samples
+posterior_samples$log_lik
+posterior_samples$lp
 
 posterior_samples$eta
 posterior_samples$sigma
@@ -164,11 +169,33 @@ posterior_samples$mu_0
 posterior_samples$mu_x
 posterior_samples$ly
 
+# BayesRelFit(obs, rep, nvar=6, pD, N=N, null_model=FALSE)
+BayesRelFit(obs=1, rep=1, nvar=6, pD=1, N=N, null_model=FALSE)
+
+# 
+# ff <- BayesRelFit(obs=chisq.obs, rep=chisq.boot, pD=temp1$pd)
+# 
+# pd <- loo(blavaan:::case_lls(lavjags, origlavmodel, lavpartable, 
+#                              lavsamplestats, lavoptions, lavcache, 
+#                              origlavdata))$p_loo
+# 
+# 
+# chisq.obs <- -2*(samplls[i, j, 1] -
+#                    samplls[i, j, 2])
+# 
+# chisq.boot <- 2*diff(blavaan:::get_ll(lavmodel = lavmodel,
+#                                       lavsamplestats = lavsamplestats,
+#                                       lavdata = lavdata,
+#                                       measure = measure))
+
+
+
 # fit_indices <- blavFitIndices(model_real_stan)
 # print(fit_indices)
 
 # https://discourse.mc-stan.org/t/covariance-matrix-not-symmetric-for-lkj-prior/20932
 # https://discourse.mc-stan.org/t/covariance-matrix-not-symmetric/29824/2
+# https://mc-stan.org/loo/reference/extract_log_lik.html
 
 ###########################################
 # data analysis with fake data
@@ -230,5 +257,53 @@ Questions to ask:
 3) # fitmeasures(res2) is not working anymore? 
 '
 
+##############################################
+### Bayesian RMSEA from Rens
+### MGV: modified to also calculate gammahat, adjusted gammahat
+### TDJ: added McDonald's centrality index
 
+### Bayesian RMSEA from Rens
+### MGV: modified to also calculate gammahat, adjusted gammahat
+### TDJ: added McDonald's centrality index
+### if a null model information provided, it calculates CFI, TLI, NFI
+BayesRelFit <-function(obs, rep, nvar, pD, N, ms = TRUE, Min1 = TRUE, Ngr = 1,
+                       null_model=TRUE, obs_null=NULL, rep_null=NULL, pD_null=NULL){
+  
+  # # Compute number of parameters
+  if(ms) p <- (((nvar * (nvar + 1)) / 2) + nvar)
+  if(!ms) p <- (((nvar * (nvar + 1))/ 2) + 0)
+  p <- p * Ngr
+  # # Substract parameters and estimated parameters
+  dif.ppD <- p - pD
+  nonc <- ( ( obs-pD ) - dif.ppD )
+  # # Correct if numerator is smaller than zero
+  nonc[nonc < 0] <- 0
+  # # Compute BRMSEA (with or without the -1 correction)
+  if(Min1)
+    BRMSEA <- sqrt(nonc / (dif.ppD * (N -1)))*sqrt(Ngr)
+  if(!Min1) BRMSEA <- sqrt(nonc / (dif.ppD * N ))*sqrt(Ngr)
+  
+  ## compute GammaHat and adjusted GammaHat
+  gammahat <- nvar / ( nvar+2* ((nonc)/(N-1))  )
+  adjgammahat <- 1 - (((Ngr * nvar * (nvar + 1))/2)/dif.ppD) * (1 - gammahat)
+  
+  ## compute McDonald's centrality index
+  Mc <- exp(-.5 * nonc/(N-1) )
+  
+  ## calculate fit when null model is provided
+  if (null_model) {
+    dif.ppD_null <- p - pD_null
+    nonc_null <- ( ( obs_null-pD_null ) - dif.ppD_null )
+    
+    cfi <- (nonc_null - nonc)/nonc_null 
+    tli <- ((( obs_null-pD_null )/dif.ppD_null) - (( obs-pD )/dif.ppD)) / (((( obs_null-pD_null )/dif.ppD_null))-1) 
+    nfi <- (( obs_null-pD_null ) - ( obs-pD )) / ( obs_null-pD_null )
+    
+    out <- cbind(BRMSEA=BRMSEA, BGammaHat=gammahat, adjBGammaHat=adjgammahat, BMc = Mc, BCFI=cfi, BTLI=tli, BNFI=nfi)
+  } else {
+    out <- cbind(BRMSEA=BRMSEA, BGammaHat=gammahat, adjBGammaHat=adjgammahat, BMc = Mc)
+  }
+  
+  return(out)
+}
 
