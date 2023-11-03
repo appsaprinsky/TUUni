@@ -3,13 +3,26 @@
 # install.packages("rjags")
 # install.packages("blavaan")
 # install.packages("mvtnorm")
+library(loo)
+library(dplyr)
+"
+1) Different results every time. Fix it
+=====
+2) Account for priors distributions
+
+
+
++++++++
+1) Can I take pD directly from jags loo()$p_loo ?
+"
+
 
 # library(rjags) # issue with jags instalation
 # library(R2jags)
 library(blavaan) # standard package
 library(rstan)
 library(mvtnorm) # mv normal data
-source("functions_for_blavaan.R")
+# source("functions_for_blavaan.R")
 packageVersion("blavaan")
 packageVersion("rjags")
 packageVersion("rstan")
@@ -94,7 +107,15 @@ stan_data <- list(
   x=x
 )
 
-#######################################STAN CODE###########################
+
+
+res1@external$samplls
+
+'
+[250,] -2492.279 -2492.279 -2492.279 -2492.279
+'
+# posterior_samples$lp
+
 stan_model_code <- '
 data {
   int<lower=0> N;
@@ -112,7 +133,7 @@ parameters {
 
 transformed parameters {
   matrix[N, 6] mu_x;
-  
+
   for (i in 1:N) {
     mu_x[i, 1] = eta[i, 1];
     mu_x[i, 2] = ly[1]*eta[i, 1];
@@ -131,6 +152,7 @@ model {
     }
     eta[i, 1:2] ~ multi_normal(mu_0,sigma);
   }
+  epsilon ~ cauchy(0.5, 0.5);
 }
 
 generated quantities {
@@ -139,6 +161,67 @@ generated quantities {
     log_lik[i] = 0;
     for (j in 1:6) {
       log_lik[i] += normal_lpdf(x[i,j] | mu_x[i,j], epsilon[j]);
+    }
+  }
+}
+'
+#######################################STAN CODE###########################
+stan_model_code <- '
+data {
+  int<lower=0> N;
+  matrix[N, 6] x; 
+}
+
+parameters {
+  matrix[N, 2]  eta;
+  vector<lower=0>[6] epsilon; 
+  cov_matrix[2] sigma; 
+  vector[2] mu_0; 
+  vector[4] ly;
+}
+
+transformed parameters {
+  matrix[N, 6] mu_x;
+  matrix[N, 6, 4] mu_x_rep;
+
+  for (i in 1:N) {
+    mu_x[i, 1] = eta[i, 1];
+    mu_x[i, 2] = ly[1]*eta[i, 1];
+    mu_x[i, 3] = ly[2]*eta[i, 1];
+
+    mu_x[i, 4] = eta[i, 2];
+    mu_x[i, 5] = ly[3]*eta[i, 2];
+    mu_x[i, 6] = ly[4]*eta[i, 2];
+  }
+}
+
+model {
+  for (i in 1:N) {
+    for (j in 1:6) {
+      x[i,j] ~ normal(mu_x[i,j], epsilon[j]);
+    }
+    eta[i, 1:2] ~ multi_normal(mu_0, sigma);
+  }
+  epsilon ~ cauchy(0.5, 0.5);
+}
+
+generated quantities {
+  vector[N, 4] log_lik; // Store log likelihood values for each chain
+
+  for (c in 1:4) {
+    for (i in 1:N) {
+      mu_x_rep[i, 1, c] = eta[i, 1];
+      mu_x_rep[i, 2, c] = ly[1] * eta[i, 1];
+      mu_x_rep[i, 3, c] = ly[2] * eta[i, 1];
+      mu_x_rep[i, 4, c] = eta[i, 2];
+      mu_x_rep[i, 5, c] = ly[3] * eta[i, 2];
+      mu_x_rep[i, 6, c] = ly[4] * eta[i, 2];
+    }
+    for (i in 1:N) {
+      log_lik[c, i] = 0;
+      for (j in 1:6) {
+        log_lik[c, i] += normal_lpdf(x[i, j] | mu_x_rep[i, j], epsilon[j]);
+      }
     }
   }
 }
@@ -154,10 +237,28 @@ stan_data <- list(
   # ly=c(1,1, 1, 1)
 )
 
+# 
+# pd <- loo(blavaan:::case_lls(lavjags, origlavmodel, lavpartable, 
+#                              lavsamplestats, lavoptions, lavcache, 
+#                              origlavdata))$p_loo
+# 
+
+
 
 # find.package('rstan')
-model_real_stan <- stan(model_code = stan_model_code, iter = 1000, verbose = FALSE, data=stan_data )
+model_real_stan <- stan(model_code = stan_model_code, iter = 1000, verbose = FALSE, data=stan_data, chains=4 )
 posterior_samples <- extract(model_real_stan)
+posterior_samples$log_lik
+
+ddd <- data.frame(posterior_samples$log_lik)
+ddd
+
+ddd <- ddd %>%
+  mutate(ll = rowSums(., na.rm=TRUE))
+
+ddd$ll
+
+
 posterior_samples
 posterior_samples$log_lik
 posterior_samples$lp
@@ -169,8 +270,61 @@ posterior_samples$mu_0
 posterior_samples$mu_x
 posterior_samples$ly
 
-# BayesRelFit(obs, rep, nvar=6, pD, N=N, null_model=FALSE)
-BayesRelFit(obs=1, rep=1, nvar=6, pD=1, N=N, null_model=FALSE)
+
+res1@external$samplls
+
+
+summary(posterior_samples)
+
+
+
+
+
+
+
+
+# for(j in 1:4){
+#   csdist <- rep(NA, 1000)
+#   for(i in 1:1000){
+#     chisq.obs <- -2*(res1@external$samplls[i, j, 1] - res1@external$samplls[i, j, 2])
+#     csdist[i] <- chisq.obs
+#   }
+#   list(csdist = csdist)
+#   csdist <- unlist(lapply(res, function(x) x$csdist))
+# }
+# 
+# csdist
+# 
+# chisq.obs <- -2*(samplls[i, j, 1] -
+#                    samplls[i, j, 2])
+
+# res1 <- bcfa(model, data=as.data.frame(x),#target="jags",     ##################COnvergence rate , rhat stat 1, ess above 400
+#              burnin = 1000, n.chains = 4, sample = 1000,
+#              mcmcfile = "model1") # this is wrong
+# postpred_mgv(4, 1000, res1@external$samplls)$chisqs[,1][1:1000]
+
+
+# sampler_params <- get_sampler_params(model_real_stan, inc_warmup = FALSE)
+# sampler_params
+
+
+
+
+
+
+
+aaa <- postpred_mgv(4, 1000, res1@external$samplls)$chisqs[,1]#[1:1000]
+
+res1@external$samplls
+
+
+
+aaa <- postpred_mgv(4, 1000, res1@external$samplls)$chisqs[,1]
+aaa
+ff <- BayesRelFit( obs=aaa, rep=20000000, nvar=6, pD=1358.2, N=N, null_model=FALSE)
+ff[3500:4000, ]
+
+res1@external$samplls[,,1][1000, 1:4]
 
 # 
 # ff <- BayesRelFit(obs=chisq.obs, rep=chisq.boot, pD=temp1$pd)
@@ -182,13 +336,6 @@ BayesRelFit(obs=1, rep=1, nvar=6, pD=1, N=N, null_model=FALSE)
 # 
 # chisq.obs <- -2*(samplls[i, j, 1] -
 #                    samplls[i, j, 2])
-# 
-# chisq.boot <- 2*diff(blavaan:::get_ll(lavmodel = lavmodel,
-#                                       lavsamplestats = lavsamplestats,
-#                                       lavdata = lavdata,
-#                                       measure = measure))
-
-
 
 # fit_indices <- blavFitIndices(model_real_stan)
 # print(fit_indices)
@@ -248,7 +395,7 @@ model_real_jags <- jags.parallel(data=data.jags,
 model_real_jags
 # 3rd model: stan
 
-
+res1@Data@ngroups
 
 '
 Questions to ask:
@@ -307,3 +454,122 @@ BayesRelFit <-function(obs, rep, nvar, pD, N, ms = TRUE, Min1 = TRUE, Ngr = 1,
   return(out)
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+postpred_mgv <- function(n.chains,psamp, samplls ) { 
+  loop.args <- list(X = 1:n.chains, FUN = function(j){
+    ### MGV: added chi-square boots to later calculate relative fits
+    sdist <- rep(NA, psamp)
+    for(i in 1:psamp){
+      chisq.obs <- -2*(samplls[i, j, 1] -
+                         samplls[i, j, 2])
+      csdist[i] <- chisq.obs
+    } 
+    list(csdist = csdist)
+  })
+  res <- do.call(lapply, loop.args)
+  csdist <- unlist(lapply(res, function(x) x$csdist))
+  list(chisqs=cbind(obs=csdist))
+}
+
+
+# postpred_mgv <- function(n.chains, psamp, samplls) {
+#   loop.args <- list(X = 1:n.chains, FUN = function(j){
+#     ind <- csdist <- csboots <- rep(NA, psamp)
+#     for(i in 1:psamp){
+#       chisq.obs <- -2*(samplls[i, j, 1] -
+#                          samplls[i, j, 2])
+#       csdist[i] <- chisq.obs
+#     } # i
+#     list(csdist = csdist)
+#   })
+#   res <- do.call(lapply, loop.args)
+#   csdist <- unlist(lapply(res, function(x) x$csdist))
+#   list(chisqs=cbind(obs=csdist, oms=1))
+# }
+
+
+
+# 1st model 
+model <- '
+eta1 =~ V1+V2+V3
+eta2 =~ V4+V5+V6
+'
+# run the bayesian model
+res11111 <- bsem(model, data=as.data.frame(x),#target="jags",     ##################COnvergence rate , rhat stat 1, ess above 400
+             burnin = 1000, n.chains = 4, sample = 1000,
+             mcmcfile = "model1", std.lv = TRUE) # this is wrong
+# extract model fit
+
+
+res11111@external$samplls[,,1]
+res11111@Fit@fx
+mean(as.numeric(res11111@external$samplls[,,1]))
+
+# -2492.279
+
+res1111 # summary(res1)
+
+res11111@external$samplls[,,2]
+
+
+2*(res11111@Fit@fx - mean(as.numeric(res11111@external$samplls[,,1])))
+
+
+res1111@external$mcmcout
+
+# llmat[itnums,j,2] <- rowSums(llsat[idx,]) + llmat[itnums,j,1]
+
+
+itnums=1000
+llmat <- array(NA, c(1000, 4, 2))
+lls <- loo::extract_log_lik(res1111@external$mcmcout)
+llsat <- loo::extract_log_lik(res1111@external$mcmcout, parameter_name = "log_lik_sat")
+for(j in 1:4){
+  idx <- (j-1)*1000 + itnums
+  llmat[itnums,j,1] <- rowSums(lls[idx,])
+  llmat[itnums,j,2] <- rowSums(llsat[idx,]) + llmat[itnums,j,1]
+}
+
+
+idx
+llmat
+
+
+
+
+res1111@external$samplls[,,2]
+
+?res1111@external
+
+res1111@Fit@fx
+res1111@external$sampkls
+
+res1@external$samplls[,,2]
+
+res1@Fit
+mean(as.numeric(res1@external$samplls[,,1]))
+
+res1@external$samplls[,,2]
