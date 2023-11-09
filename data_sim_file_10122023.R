@@ -57,6 +57,11 @@ eta2 =~ V4+V5+V6
 res1 <- bsem(model, data=as.data.frame(x),#target="jags",     ##################COnvergence rate , rhat stat 1, ess above 400
              burnin = 1000, n.chains = 4, sample = 1000,
              mcmcfile = "model1", std.lv = TRUE) # this is wrong
+
+# run the bayesian model
+res1 <- bsem(model, data=as.data.frame(x),#target="jags",     ##################Delete later
+             burnin = 500, n.chains = 1, sample = 1000,  ############ DELETE LATER
+             mcmcfile = "model1", std.lv = TRUE) # this is wrong  ############ DELETE LATER
 # extract model fit
 res1 # summary(res1)
 summary(res1)
@@ -78,6 +83,12 @@ fit1_REAL_INDICIES <- bcfa(model, data = as.data.frame(x),
 null.model <- c(paste0("V", 1:6, " ~~ V", 1:6), paste0("V", 1:6, " ~ 1"))
 fit0_REAL_INDICIES <- bcfa(null.model, data = as.data.frame(x),
              n.chains = 4, burnin = 1000, sample = 1000)
+
+fit1_REAL_INDICIES <- bcfa(model, data = as.data.frame(x),      ############ DELETE LATER
+                           n.chains = 1, burnin = 1000, sample = 1000)  ############ DELETE LATER
+null.model <- c(paste0("V", 1:6, " ~~ V", 1:6), paste0("V", 1:6, " ~ 1"))  ############ DELETE LATER
+fit0_REAL_INDICIES <- bcfa(null.model, data = as.data.frame(x),  ############ DELETE LATER
+                           n.chains = 1, burnin = 1000, sample = 1000)  ############ DELETE LATER
 
 blavFitIndices(fit1_REAL_INDICIES, baseline.model = fit0_REAL_INDICIES)
 '
@@ -109,7 +120,7 @@ stan_data <- list(
 
 
 
-res1@external$samplls
+res1@external$samplls[,,2]
 
 '
 [250,] -2492.279 -2492.279 -2492.279 -2492.279
@@ -229,6 +240,67 @@ generated quantities {
 
 
 
+
+
+stan_model_code <- '
+data {
+  int<lower=0> N;
+  matrix[N, 6] x; 
+  // vector[4] ly;
+}
+
+parameters {
+  matrix[N, 2]  eta;
+  vector<lower=0>[6] epsilon; 
+  cov_matrix[2] sigma; 
+  vector[2] mu_0; 
+  vector[4] ly;
+}
+
+transformed parameters {
+  matrix[N, 6] mu_x;
+
+  for (i in 1:N) {
+    mu_x[i, 1] = eta[i, 1];
+    mu_x[i, 2] = ly[1]*eta[i, 1];
+    mu_x[i, 3] = ly[2]*eta[i, 1];
+
+    mu_x[i, 4] = eta[i, 2];
+    mu_x[i, 5] = ly[3]*eta[i, 2];
+    mu_x[i, 6] = ly[4]*eta[i, 2];
+  }
+}
+
+model {
+
+  for(k in 1:4){
+    ly[k] ~ normal(0, 1);  // DELETE LATERRRRRRR
+  }
+  
+  for(k in 1:6){
+    epsilon[k] ~ cauchy(0.5, 0.5);   // DELETE LATERRRRRRR
+  }
+
+  for (i in 1:N) {
+    for (j in 1:6) {
+      x[i,j] ~ normal(mu_x[i,j], epsilon[j]);
+    }
+    eta[i, 1:2] ~ multi_normal(mu_0,sigma);
+  }
+  epsilon ~ cauchy(0.5, 0.5);
+}
+
+generated quantities {
+  vector[N] log_lik;
+  for (i in 1:N) {
+    log_lik[i] = 0;
+    for (j in 1:6) {
+      log_lik[i] += normal_lpdf(x[i,j] | mu_x[i,j], epsilon[j]);
+    }
+  }
+}
+'
+
 #######################################STAN CODE###########################
 
 stan_data <- list(
@@ -246,7 +318,8 @@ stan_data <- list(
 
 
 # find.package('rstan')
-model_real_stan <- stan(model_code = stan_model_code, iter = 1000, verbose = FALSE, data=stan_data, chains=4 )
+# model_real_stan <- stan(model_code = stan_model_code, iter = 1000, verbose = FALSE, data=stan_data, chains=4 )
+model_real_stan <- stan(model_code = stan_model_code, iter = 1000, verbose = FALSE, data=stan_data, chains=1 )
 posterior_samples <- extract(model_real_stan)
 posterior_samples$log_lik
 
@@ -257,6 +330,7 @@ ddd <- ddd %>%
   mutate(ll = rowSums(., na.rm=TRUE))
 
 ddd$ll
+res1@external$samplls[,,1]
 
 
 posterior_samples
