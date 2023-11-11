@@ -263,8 +263,6 @@ ddd$ll
 res1@external$samplls[1:500,,1]
 res1@external$samplls[,,2]
 
-
-
 sum(data.frame(posterior_samples$log_lik_sat)[1,])
 sum(data.frame(posterior_samples$log_lik)[1,])
 

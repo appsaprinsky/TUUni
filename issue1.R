@@ -65,6 +65,10 @@ res <- try(do.call(rjcall, rjarg))
  if (do_test) {
    log_lik_sat[mm] = -log_lik[mm] + wishart_lpdf((N[mm] - 1) * Sstar[mm] | N[mm] - 1, Sstar[mm]);
 
+
+ log_lik[mm] = wishart_lpdf((N[mm] - 1) * Sstar[mm] | N[mm] - 1, Sigma[mm]);
+ if (do_test) {
+   log_lik_sat[mm] = -log_lik[mm] + wishart_lpdf((N[mm] - 1) * Sstar[mm] | N[mm] - 1, Sstar[mm]);
 '
 
 log_lik[i] += normal_lpdf(x[i,j] | mu_x[i,j], epsilon[j]);
