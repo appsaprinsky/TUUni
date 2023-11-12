@@ -175,12 +175,43 @@ generated quantities {
     for (aaa in 1:6) {
       for (sss in 1:6) {
         if (aaa == sss) {
-          curr_cov_ll[aaa, sss] = VARIANCE_TRIAL[aaa]; //epsilon[aaa];  TRIAL
+          curr_cov_ll[aaa, sss] = ly[aaa]*ly[aaa] + epsilon[aaa]; //epsilon[aaa];  VARIANCE_TRIAL[aaa]; TRIAL
         } else {
-          curr_cov_ll[aaa, sss] = 0; // curr_cov_ll[aaa, sss] = cov_x_DATA[aaa, sss]; 
+          curr_cov_ll[aaa, sss] = ly[aaa]*ly[sss]*sigma; // curr_cov_ll[aaa, sss] = cov_x_DATA[aaa, sss]; 
         }
       }
     }
+    
+    
+    for (aaa in 1:6) {
+      for (sss in 1:6) {
+        if (aaa == sss) {
+          curr_cov_ll[aaa, sss] = LY_TRIAL[aaa]*LY_TRIAL[aaa] + VARIANCE_TRIAL[aaa]; //epsilon[aaa];  VARIANCE_TRIAL[aaa]; TRIAL
+        } else {
+          if ((aaa <= 3 && sss <= 3) || (aaa >= 4 && sss >= 4)){
+            curr_cov_ll[aaa, sss] = LY_TRIAL[aaa]*LY_TRIAL[sss]; // curr_cov_ll[aaa, sss] = cov_x_DATA[aaa, sss]; 
+          } else {
+            curr_cov_ll[aaa, sss] = LY_TRIAL[aaa]*LY_TRIAL[sss]*-0.054; // curr_cov_ll[aaa, sss] = cov_x_DATA[aaa, sss]; 
+          }
+        }
+      }
+    }    
+    
+    for (aaa in 1:6) {
+      for (sss in 1:6) {
+        if (aaa == sss) {
+          curr_cov_ll[aaa, sss] = ly[aaa]*ly[aaa] + VARIANCE_TRIAL[aaa]; //epsilon[aaa];  VARIANCE_TRIAL[aaa]; TRIAL
+        } else {
+          if ((aaa <= 3 && sss <= 3) || (aaa >= 4 && sss >= 4)){
+            curr_cov_ll[aaa, sss] = ly[aaa]*ly[sss]; // curr_cov_ll[aaa, sss] = cov_x_DATA[aaa, sss]; 
+          } else {
+            curr_cov_ll[aaa, sss] = ly[aaa]*ly[sss]*sigma; // curr_cov_ll[aaa, sss] = cov_x_DATA[aaa, sss]; 
+          }
+        }
+      }
+    }      
+    
+    
 
     ////////////
     
@@ -202,7 +233,7 @@ generated quantities {
     mu_together_ml[4] = ly[4]*eta[i, 2]; 
     mu_together_ml[5] = ly[5]*eta[i, 2]; 
     mu_together_ml[6] = ly[6]*eta[i, 2]; 
-    print("Vector x =", eta[i, 1:2]);
+    // print("COV =", curr_cov_ll);
 
 
     
@@ -215,6 +246,10 @@ generated quantities {
   }
 }
 '
+
+
+COV =[[2.52912,-0.0995107,-0.0969401,-0.102861,-0.0960717,-0.0884721],[-0.0995107,2.21829,-0.0865283,-0.0918129,-0.0857532,-0.0789698],[-0.0969401,-0.0865283,2.15617,-0.0894412,-0.083538,-0.0769299],[-0.102861,-0.0918129,-0.0894412,2.3017,-0.08864,-0.0816282],[-0.0960717,-0.0857532,-0.083538,-0.08864,2.13554,-0.0762407],[-0.0884721,-0.0789698,-0.0769299,-0.0816282,-0.0762407,1.963]]
+
 
 log_pdf <- 0
 for (i in 1:N) {
@@ -253,8 +288,8 @@ stan_data <- list(
   x_mean=colMeans(x),
   cov_x_DATA=cov(x),
   identity_matrix = diag(6),
-  LY_TRIAL = c(1.025, 1.142, 1.102, 1.097, 1.063, 0.979),
-  VARIANCE_TRIAL = c(1.279, 0.852, 1.006, 1.024, 1.097, 0.876),
+  LY_TRIAL = c(1.019, 1.141, 1.101, 1.101, 1.069, 0.982),
+  VARIANCE_TRIAL = c(1.279, 0.853, 1.001, 1.020, 1.102, 0.882),
   zero_vector = c(0,0,0,0,0,0)
 )
 
@@ -483,14 +518,14 @@ BayesChiFit(obs = chisqs,
             nvar = 6, pD = fit_pd[1],
             N = 250,
             fit.measures = fit.measures, ms = FALSE, null_model = FALSE)#@details
-loo(model_real_stan)
+loo(model_real_stan)$p_loo[1]
 
 my_array1 <- Create2DimMatrix(posterior_samples$log_lik, posterior_samples$log_lik_sat, 1000)
 my_array1[,,2]
 chisqs1 <- as.numeric(apply(my_array1, 2,
                            function(x) 2*(x[,2] - x[,1]))) 
 BayesChiFit(obs = chisqs1, 
-            nvar = 6, pD = 328.2,
+            nvar = 6, pD = loo(model_real_stan)$p_loo[1],
             N = 250,
             fit.measures = fit.measures, ms = FALSE, null_model = FALSE)
 
