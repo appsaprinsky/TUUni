@@ -16,8 +16,6 @@ set.seed(1024)
 N <- 250
 phi <- diag(2)
 eta <- rmvnorm(N,sigma=phi)
-summary(eta)
-var(eta[,1])
 epsilon <- rmvnorm(N,sigma=diag(6))
 lambda <- matrix(c(1,1,1,0,0,0,
                    0,0,0,1,1,1),6,2,byrow=F) # misspecify lambda -> 1 where a zero is (one of them)
@@ -30,7 +28,6 @@ model <- '
 eta1 =~ V1+V2+V3
 eta2 =~ V4+V5+V6
 '
-
 res1 <- bsem(model, data=as.data.frame(x),#target="jags",    
              burnin = 500, n.chains = 1, sample = 1000, 
              mcmcfile = "model1", std.lv = TRUE) 
@@ -47,12 +44,6 @@ Posterior mean (EAP) of devm-based fit indices:
 res1@external$samplls[,,2]
 res1@external$samplls[,,1]
 
-res1@external#$stansumm
-
-
-latent_vars <- coef(res1)
-
-
 
 stan_model_code <- '
 data {
@@ -65,68 +56,58 @@ data {
   
   vector[6] LY_TRIAL;
   vector[6] VARIANCE_TRIAL;  
-  // matrix[N, 2] eta;
-  vector[6] zero_vector;
+  matrix[N, 2] ETAAA_TRIAL;
 }
 
 parameters {
   matrix[N, 2]  eta;
   vector<lower=0>[6] epsilon; 
-  real sigma; 
+  corr_matrix[2] sigma; 
   vector[6] ly;
+}
+
+transformed parameters {
+  matrix[6, 6] cov_x;
+
+  for (i in 1:6) {
+    for (j in 1:6) {
+      cov_x[i, j] = 0;
+      for (n in 1:N) {
+        int qwer1 = (i > 3) ? 2 : 1;
+        int qwer2 = (j > 3) ? 2 : 1;
+        cov_x[i, j] += (x[n, i] - ly[i]*eta[n, qwer1] ) * (x[n, j] - ly[j]*eta[n, qwer2] ); 
+      }
+      cov_x[i, j] /= N;
+      
+      if (j > i) {
+        cov_x[j, i] = cov_x[i, j];
+      }
+    }
+  }
 }
 
 model {
 
-  matrix[2,2] COV_MATRIX;  
-  vector[6] TEMP_MEAN;
-  matrix[6, 6] TEPM_VAR;    
-  
-  COV_MATRIX[1,1] = 1;
-  COV_MATRIX[2,2] = 1;
-  COV_MATRIX[1,2] = sigma;
-  COV_MATRIX[2,1] = sigma;
-  
-
 //  for(k in 1:6){
 //    ly[k] ~ normal(0, 1);  // DELETE LATERRRRRRR
 //  }
-//  sigma ~ lkj_corr(1);
+  
+  sigma ~ lkj_corr(1);
+  
 //  for(k in 1:6){
 //    epsilon[k] ~ cauchy(0, 1);   // DELETE LATERRRRRRR gamma  0, 1
 //  }
 
   for (i in 1:N) {
   
-//    x[i,1] ~ normal(ly[1]*eta[i, 1], epsilon[1]);
-//    x[i,2] ~ normal(ly[2]*eta[i, 1], epsilon[2]);
-//    x[i,3] ~ normal(ly[3]*eta[i, 1], epsilon[3]);
-//    x[i,4] ~ normal(ly[4]*eta[i, 2], epsilon[4]);
-//    x[i,5] ~ normal(ly[5]*eta[i, 2], epsilon[5]);
-//    x[i,6] ~ normal(ly[6]*eta[i, 2], epsilon[6]);
-
-
-    TEMP_MEAN[1] = ly[1]*eta[i, 1];
-    TEMP_MEAN[2] = ly[2]*eta[i, 1];    
-    TEMP_MEAN[3] = ly[3]*eta[i, 1];    
-    TEMP_MEAN[4] = ly[4]*eta[i, 2];    
-    TEMP_MEAN[5] = ly[5]*eta[i, 2];    
-    TEMP_MEAN[6] = ly[6]*eta[i, 2];
+    x[i,1] ~ normal(ly[1]*eta[i, 1], epsilon[1]);
+    x[i,2] ~ normal(ly[2]*eta[i, 1], epsilon[2]);
+    x[i,3] ~ normal(ly[3]*eta[i, 1], epsilon[3]);
+    x[i,4] ~ normal(ly[4]*eta[i, 2], epsilon[4]);
+    x[i,5] ~ normal(ly[5]*eta[i, 2], epsilon[5]);
+    x[i,6] ~ normal(ly[6]*eta[i, 2], epsilon[6]);
     
-    for (www1 in 1:6){
-      for (www2 in 1:6){
-        if (www1==www2){
-          TEPM_VAR[www1, www2] = epsilon[www1];
-        } else{
-          TEPM_VAR[www1, www2] = 0;        
-        }
-      }
-    }
-    
-    x[i,1:6] ~ multi_normal(TEMP_MEAN,TEPM_VAR);    
-    eta[i, 1:2] ~ multi_normal(mu_0,COV_MATRIX);    
-
-    
+    eta[i, 1:2] ~ multi_normal(mu_0,sigma);
   }
   // epsilon ~ cauchy(1, 1);
 }
@@ -140,27 +121,12 @@ generated quantities {
   vector[6] x_together_ml;
   vector[6] mu_together_ml;  
   
-  vector[6] mu_zeros_ml;
+  vector[6] mu_zeros_ml;   
   
-  mu_together_ml[1] = 0;   
-  mu_together_ml[2] = 0;  
-  mu_together_ml[3] = 0;  
-  mu_together_ml[4] = 0; 
-  mu_together_ml[5] = 0; 
-  mu_together_ml[6] = 0; 
-  
-  for (i in 1:N){
-    mu_together_ml[1] += ly[1]*eta[i, 1];   
-    mu_together_ml[2] += ly[2]*eta[i, 1];  
-    mu_together_ml[3] += ly[3]*eta[i, 1];  
-    mu_together_ml[4] += ly[4]*eta[i, 2]; 
-    mu_together_ml[5] += ly[5]*eta[i, 2]; 
-    mu_together_ml[6] += ly[6]*eta[i, 2]; 
-  }
-  
+  matrix[6, 6] cov_x_generated;
+  cov_x_generated = cov_x;
 
   
-  mu_together_ml = mu_together_ml/N;
   
   for (i in 1:N) {
     log_lik[i] = 0;  
@@ -171,7 +137,6 @@ generated quantities {
     log_lik[i] += normal_lpdf(x[i,5] | ly[5]*eta[i, 2], epsilon[5]);
     log_lik[i] += normal_lpdf(x[i,6] | ly[6]*eta[i, 2], epsilon[6]);
     
-  
     for (aaa in 1:6) {
       for (sss in 1:6) {
         if (aaa == sss) {
@@ -186,29 +151,18 @@ generated quantities {
     
     for (jjj in 1:3){
       x_together_ml[jjj] = x[i,jjj]; 
-//      mu_together_ml[jjj] = ly[jjj]*eta[i, 1];
-      mu_zeros_ml[jjj] = LY_TRIAL[jjj]*eta[i, 1];   // TRIAL
+      mu_together_ml[jjj] = ly[jjj]*eta[i, 1];
+      mu_zeros_ml[jjj] = LY_TRIAL[jjj]*ETAAA_TRIAL[i, 1];   // TRIAL
     }
     for (jjj in 4:6){
       x_together_ml[jjj] = x[i,jjj]; 
-//      mu_together_ml[jjj] = ly[jjj]*eta[i, 2];
-      mu_zeros_ml[jjj] = LY_TRIAL[jjj]*eta[i, 2];   // TRIAL
-    }  
-    
+      mu_together_ml[jjj] = ly[jjj]*eta[i, 2];
+      mu_zeros_ml[jjj] = LY_TRIAL[jjj]*ETAAA_TRIAL[i, 2];   // TRIAL
+    }    
 
-    mu_together_ml[1] = ly[1]*eta[i, 1];    
-    mu_together_ml[2] = ly[2]*eta[i, 1];  
-    mu_together_ml[3] = ly[3]*eta[i, 1];  
-    mu_together_ml[4] = ly[4]*eta[i, 2]; 
-    mu_together_ml[5] = ly[5]*eta[i, 2]; 
-    mu_together_ml[6] = ly[6]*eta[i, 2]; 
-    print("Vector x =", eta[i, 1:2]);
-
-
-    
-    log_lik[i] = 0;  
+    //log_lik[i] = 0;    
     log_lik_sat[i] = 0;
-    log_lik[i] = multi_normal_lpdf(x_together_ml | zero_vector , curr_cov_ll); // (mu_together_ml, curr_cov_ll) mu_zeros_ml
+    log_lik[i] = multi_normal_lpdf(x_together_ml | mu_zeros_ml, curr_cov_ll); // (mu_together_ml, curr_cov_ll)
     log_lik_sat[i] = multi_normal_lpdf(x_together_ml | x_mean, cov_x_DATA);  // 
     ////////////
     
@@ -216,32 +170,19 @@ generated quantities {
 }
 '
 
-log_pdf <- 0
-for (i in 1:N) {
-  log_pdf <- log_pdf + dmvnorm(x[i,], mean = colMeans(x), sigma = cov(x), log = TRUE)
-}
-log_pdf 
-
-
-log_pdf <- 0
-for (i in 1:N) {
-  log_pdf <- log_pdf + dmvnorm(x[i,], mean = c(0,0,0,0,0,0.3), sigma = cov(x), log = TRUE)
-}
-log_pdf 
-
-# If you want the actual probability density instead of the log pdf
-pdf <- exp(log_pdf)
-
-x[1,]
-
 stan_data <- list(
   N=N,
   x=as.data.frame(x),
   mu_0=c(0,0), 
   x_mean=colMeans(x),
-  cov_x_DATA=cor(x),
+  cov_x_DATA=cov(x),
   identity_matrix = diag(6)
 )
+
+
+
+
+
 
 
 # $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
@@ -255,8 +196,9 @@ stan_data <- list(
   identity_matrix = diag(6),
   LY_TRIAL = c(1.025, 1.142, 1.102, 1.097, 1.063, 0.979),
   VARIANCE_TRIAL = c(1.279, 0.852, 1.006, 1.024, 1.097, 0.876),
-  zero_vector = c(0,0,0,0,0,0)
+  ETAAA_TRIAL = eta
 )
+
 
 # $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
@@ -268,8 +210,6 @@ posterior_samples$log_lik
 posterior_samples$log_lik_sat
 posterior_samples$sigma
 posterior_samples$cov_x_generated[1,,]
-posterior_samples$epsilon[1000,]
-posterior_samples$curr_cov_ll
 
 # posterior_samples$target
 
@@ -292,7 +232,7 @@ ddd <- ddd %>%
 
 ddd$ll
 res1@external$samplls[1:500,,1]
-res1@external$samplls[,,1]
+res1@external$samplls[,,2]
 
 sum(data.frame(posterior_samples$log_lik_sat)[1,])
 sum(data.frame(posterior_samples$log_lik)[1,])
@@ -394,7 +334,7 @@ res1@external$samplls
 
 
 
-plot(res1@external$samplls[,,1], )
+
 
 
 #######################################################################

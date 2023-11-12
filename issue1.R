@@ -80,6 +80,18 @@ log_lik_sat[i] = -log_lik[i] + normal_lpdf(x[i,j] | mu_x[i,j], epsilon[j]);
 
 
 
+log_lik_rep[jj] = multi_normal_suff(YXstar_rep[jj, 1:Nobs[mm]], zmat[1:Nobs[mm], 1:Nobs[mm]], Mu[grpidx, obsidx[1:Nobs[mm]]], Sigmainv[mm], 1);
+
+
+real multi_normal_suff(vector xbar, matrix S, vector Mu, matrix Supdate, int N) {
+  int Nobs = dims(S)[1];
+  real out;
+  // using elementwise multiplication + sum here for efficiency
+  out = -.5 * N * ( sum(Supdate[1:Nobs, 1:Nobs] .* (S + (xbar - Mu) * (xbar - Mu))) + Supdate[Nobs + 1, Nobs + 1] + Nobs * log(2 * pi()) );
+    if(is_nan(out) || out == positive_infinity()) out = negative_infinity();
+    return out;
+  }
+
 
 
 
