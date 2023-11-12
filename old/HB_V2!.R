@@ -170,11 +170,21 @@ generated quantities {
     log_lik[i] += normal_lpdf(x[i,5] | ly[5]*eta[i, 2], epsilon[5]);
     log_lik[i] += normal_lpdf(x[i,6] | ly[6]*eta[i, 2], epsilon[6]);
     
-    
+  
     for (aaa in 1:6) {
       for (sss in 1:6) {
         if (aaa == sss) {
           curr_cov_ll[aaa, sss] = ly[aaa]*ly[aaa] + epsilon[aaa]; //epsilon[aaa];  VARIANCE_TRIAL[aaa]; TRIAL
+        } else {
+          curr_cov_ll[aaa, sss] = ly[aaa]*ly[sss]*sigma; // curr_cov_ll[aaa, sss] = cov_x_DATA[aaa, sss]; 
+        }
+      }
+    }
+    
+    for (aaa in 1:6) {
+      for (sss in 1:6) {
+        if (aaa == sss) {
+          curr_cov_ll[aaa, sss] = ly[aaa]*ly[aaa] + VARIANCE_TRIAL[aaa]; //epsilon[aaa];  VARIANCE_TRIAL[aaa]; TRIAL
         } else {
           if ((aaa <= 3 && sss <= 3) || (aaa >= 4 && sss >= 4)){
             curr_cov_ll[aaa, sss] = ly[aaa]*ly[sss]; // curr_cov_ll[aaa, sss] = cov_x_DATA[aaa, sss]; 

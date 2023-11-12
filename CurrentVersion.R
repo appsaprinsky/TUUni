@@ -45,12 +45,6 @@ Posterior mean (EAP) of devm-based fit indices:
       BRMSEA    BGammaHat adjBGammaHat          BMc 
        0.017        0.998        0.994        0.996 
 '
-res1@external$samplls[,,2]
-res1@external$samplls[,,1]
-
--2498.066res1@external#$stansumm
-
-
 
 
 stan_model_code <- '
@@ -87,42 +81,49 @@ model {
   COV_MATRIX[2,1] = sigma;
   
 
-  for(k in 1:6){
-    ly[k] ~ normal(0, 1);  // DELETE LATERRRRRRR
-  }
+//  for(k in 1:6){
+//    ly[k] ~ normal(0, 1);  // DELETE LATERRRRRRR
+//  }
 //  sigma ~ lkj_corr(1);
-  for(k in 1:6){
-    epsilon[k] ~ cauchy(0, 1);   // DELETE LATERRRRRRR gamma  0, 1
-  }
+//  for(k in 1:6){
+//    epsilon[k] ~ cauchy(0, 1);   // DELETE LATERRRRRRR gamma  0, 1
+//  }
 
   for (i in 1:N) {
   
-//    x[i,1] ~ normal(ly[1]*eta[i, 1], epsilon[1]);
-//    x[i,2] ~ normal(ly[2]*eta[i, 1], epsilon[2]);
-//    x[i,3] ~ normal(ly[3]*eta[i, 1], epsilon[3]);
-//    x[i,4] ~ normal(ly[4]*eta[i, 2], epsilon[4]);
-//    x[i,5] ~ normal(ly[5]*eta[i, 2], epsilon[5]);
-//    x[i,6] ~ normal(ly[6]*eta[i, 2], epsilon[6]);
+    x[i,1] ~ normal(ly[1]*eta[i, 1], epsilon[1]);
+    x[i,2] ~ normal(ly[2]*eta[i, 1], epsilon[2]);
+    x[i,3] ~ normal(ly[3]*eta[i, 1], epsilon[3]);
+    x[i,4] ~ normal(ly[4]*eta[i, 2], epsilon[4]);
+    x[i,5] ~ normal(ly[5]*eta[i, 2], epsilon[5]);
+    x[i,6] ~ normal(ly[6]*eta[i, 2], epsilon[6]);
 
 
-    TEMP_MEAN[1] = ly[1]*eta[i, 1];
-    TEMP_MEAN[2] = ly[2]*eta[i, 1];    
-    TEMP_MEAN[3] = ly[3]*eta[i, 1];    
-    TEMP_MEAN[4] = ly[4]*eta[i, 2];    
-    TEMP_MEAN[5] = ly[5]*eta[i, 2];    
-    TEMP_MEAN[6] = ly[6]*eta[i, 2];
+//    TEMP_MEAN[1] = ly[1]*eta[i, 1];
+//    TEMP_MEAN[2] = ly[2]*eta[i, 1];    
+//    TEMP_MEAN[3] = ly[3]*eta[i, 1];    
+//    TEMP_MEAN[4] = ly[4]*eta[i, 2];    
+//    TEMP_MEAN[5] = ly[5]*eta[i, 2];    
+//    TEMP_MEAN[6] = ly[6]*eta[i, 2];
     
-    for (www1 in 1:6){
-      for (www2 in 1:6){
-        if (www1==www2){
-          TEPM_VAR[www1, www2] = epsilon[www1];
-        } else{
-          TEPM_VAR[www1, www2] = 0;        
-        }
-      }
-    }
+
+//    for (aaa in 1:6) {
+//      for (sss in 1:6) {
+//        if (aaa == sss) {
+//          TEPM_VAR[aaa, sss] = ly[aaa]*ly[aaa] + epsilon[aaa]; 
+//        } else {
+//          if ((aaa <= 3 && sss <= 3) || (aaa >= 4 && sss >= 4)){
+//            TEPM_VAR[aaa, sss] = ly[aaa]*ly[sss];  
+//          } else {
+//            TEPM_VAR[aaa, sss] = ly[aaa]*ly[sss]*sigma; 
+//          }
+//        }
+//      }
+//    }       
     
-    x[i,1:6] ~ multi_normal(TEMP_MEAN,TEPM_VAR);    
+    
+    
+//    x[i,1:6] ~ multi_normal(TEMP_MEAN,TEPM_VAR);    
     eta[i, 1:2] ~ multi_normal(mu_0,COV_MATRIX);    
 
     
@@ -220,33 +221,6 @@ generated quantities {
   }
 }
 '
-
-
-stan_data <- list(
-  N=N,
-  x=as.data.frame(x),
-  mu_0=c(0,0), 
-  x_mean=colMeans(x),
-  cov_x_DATA=cor(x),
-  identity_matrix = diag(6)
-)
-
-COV =[[2.31736,1.16268,1.12192,-0.0605836,-0.0588228,-0.0540355],[1.16268,2.15488,1.25624,-0.067837,-0.0658654,-0.0605049],[1.12192,1.25624,2.2132,-0.0654589,-0.0635563,-0.0583838],[-0.0605836,-0.067837,-0.0654589,2.2322,1.17697,1.08118],[-0.0588228,-0.0658654,-0.0635563,1.17697,2.24476,1.04976],[-0.0540355,-0.0605049,-0.0583838,1.08118,1.04976,1.84632]]
-
-# $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-
-stan_data <- list(
-  N=N,
-  x=as.data.frame(x),
-  mu_0=c(0,0), 
-  x_mean=colMeans(x),
-  cov_x_DATA=cov(x),
-  identity_matrix = diag(6),
-  LY_TRIAL = c(1.026, 1.147, 1.110, 1.109, 1.078,  0.993),
-  VARIANCE_TRIAL = c(1.27935035, 0.85319543, 1.00105014, 1.02030526, 1.10168394, 0.88158536),
-  zero_vector = c(0,0,0,0,0,0)
-)
-
 stan_data <- list(
   N=N,
   x=as.data.frame(x),
@@ -264,14 +238,7 @@ stan_data <- list(
 
 model_real_stan <- stan(model_code = stan_model_code, iter = 1500, verbose = FALSE, data=stan_data, chains=1, warmup = 500 )
 posterior_samples <- extract(model_real_stan)
-posterior_samples$log_lik
-posterior_samples$log_lik_sat
-posterior_samples$sigma
-posterior_samples$cov_x_generated[1,,]
-posterior_samples$epsilon[1000,]
-posterior_samples$curr_cov_ll
 
-# posterior_samples$target
 
 ddd <- data.frame(posterior_samples$log_lik)
 sum(ddd[1,])
@@ -283,130 +250,40 @@ sum(ddd1[1,])
 rowSums (ddd1)
 
 
-loo(model_real_stan)
-
 plot(rowSums(ddd), res1@external$samplls[,,1])
 
-ddd <- ddd %>%
-  mutate(ll = rowSums(., na.rm=TRUE))
 
-ddd$ll
-res1@external$samplls[1:500,,1]
-res1@external$samplls[,,1]
+# $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+"
+Please run first # IMPORTANT PRE USED FUNCTIONS
 
-sum(data.frame(posterior_samples$log_lik_sat)[1,])
-sum(data.frame(posterior_samples$log_lik)[1,])
-
+Create2DimMatrix
+BayesChiFit
+"
 
 
 
-res <- rstan::read_stan_csv(model_real_stan $output_files())
+################### Measures for BLAVAAN #####################
+pD = c("loo","waic","dic")
+rescale = c("devm","ppmc")
+fit.measures = "all"
 
 
+chisqs <- as.numeric(apply(res1@external$samplls, 2,
+                           function(x) 2*(x[,2] - x[,1])))   
+fit_pd <- fitMeasures(res1, paste0('p_', pD))              
+fitMeasures(res1)
+'
+      npar       logl        ppp        bic        dic      p_dic       waic     p_waic    se_waic      looic 
+    13.000  -2495.968      0.541   5063.664   5017.958     13.011   5018.188     13.005     56.695   5018.271 
+     p_loo     se_loo margloglik 
+    13.047     56.699         NA 
+'
 
-loo::extract_log_lik(model_real_stan, parameter_name = "log_lik_sat")
-
-
-llsat <- loo::extract_log_lik(lavjags, parameter_name = "log_lik_sat")
-
-
-loo::extract_log_lik(model_real_stan, parameter_name = "log_lik")
-loo::extract_log_lik(res1, parameter_name = "log_lik")
-
-
-
-
-posterior_samples
-res1@external
-
-res1
-
-
-
-
-
-
-posterior_samples
-posterior_samples$log_lik
-posterior_samples$lp
-
-posterior_samples$eta
-posterior_samples$sigma
-posterior_samples$epsilon
-posterior_samples$mu_0
-posterior_samples$mu_x
-posterior_samples$ly
-
-
-res1@external$samplls
-
-
-summary(posterior_samples)
-
-
-rstan::expose_stan_functions("model1/sem.stan")
-
-
-
-
-
-# for(j in 1:4){
-#   csdist <- rep(NA, 1000)
-#   for(i in 1:1000){
-#     chisq.obs <- -2*(res1@external$samplls[i, j, 1] - res1@external$samplls[i, j, 2])
-#     csdist[i] <- chisq.obs
-#   }
-#   list(csdist = csdist)
-#   csdist <- unlist(lapply(res, function(x) x$csdist))
-# }
-# 
-# csdist
-# 
-# chisq.obs <- -2*(samplls[i, j, 1] -
-#                    samplls[i, j, 2])
-
-# res1 <- bcfa(model, data=as.data.frame(x),#target="jags",     ##################COnvergence rate , rhat stat 1, ess above 400
-#              burnin = 1000, n.chains = 4, sample = 1000,
-#              mcmcfile = "model1") # this is wrong
-# postpred_mgv(4, 1000, res1@external$samplls)$chisqs[,1][1:1000]
-
-
-# sampler_params <- get_sampler_params(model_real_stan, inc_warmup = FALSE)
-# sampler_params
-
-
-
-
-
-
-
-aaa <- postpred_mgv(4, 1000, res1@external$samplls)$chisqs[,1]#[1:1000]
-
-res1@external$samplls
-
-
-
-
-
-
-
-
-
-
-
-plot(res1@external$samplls[,,1], )
-
-
-#######################################################################
-
-res1 <- bsem(model, data=as.data.frame(x),#target="jags",    
-             burnin = 500, n.chains = 1, sample = 1000, 
-             mcmcfile = "model1", estimator = "ML") 
-# extract model fit
-res1 # summary(res1)
-summary(res1)
-blavFitIndices(res1)
-
+BayesChiFit(obs = chisqs, 
+            nvar = 6, pD = fit_pd[1],
+            N = 250,
+            fit.measures = fit.measures, ms = FALSE, null_model = FALSE)#@details
 '
 Posterior mean (EAP) of devm-based fit indices:
 
@@ -414,79 +291,12 @@ Posterior mean (EAP) of devm-based fit indices:
        0.017        0.998        0.994        0.996 
 '
 
+########################################
 
-res1@external$samplls[,,2]
-
-
-
-BayesRelFit(obs=res1@external$samplls[1,,1], rep=res1@external$samplls[1,,2], nvar=6, 
-            pD=1358.2, N=250)
-
-
-res1@external$p_waic
-
-res1@ParTable
-# semTools::fitmeasures(res1, c("dic", "pd"))
-# semTools::fitmeasures(res1)
-
-
-BayesFIT (fit1=res1)
-loo::loo(res1)
-library(coda)
-mcmc_samples <- extract(res1)
-as.mcmc.list(mcmc_samples)
-loo(res1)
-
-
-chisqs <- as.numeric(apply(res1@external$samplls, 2,
-                           function(x) 2*(x[,2] - x[,1])))
-
-chisqs
-
-
-
-
-
-
-blavFitIndices(res1)
-
-
-
-
-
-blavFitIndices1(res1)
-
-
-
-
-
-blavInspect(res1, 'ntotal') 
-
-
-
-
-
-################### BY HANDS #####################
-pD = c("loo","waic","dic")
-rescale = c("devm","ppmc")
-fit.measures = "all"
-
-
-chisqs <- as.numeric(apply(res1@external$samplls, 2,
-                           function(x) 2*(x[,2] - x[,1])))    # $$$$$$$$$$$$$$$$$$$$$$ NEED
-fit_pd <- fitMeasures(res1, paste0('p_', pD))                 # $$$$$$$$$$$$$$$$$$$$$$ NEED
-
-fitMeasures(res1)
-
-
-BayesChiFit(obs = chisqs, 
-            nvar = 6, pD = fit_pd[1],
-            N = 250,
-            fit.measures = fit.measures, ms = FALSE, null_model = FALSE)#@details
+################### Measures for STAN #####################
 loo(model_real_stan)$p_loo[1]
 
 my_array1 <- Create2DimMatrix(posterior_samples$log_lik, posterior_samples$log_lik_sat, 1000)
-my_array1[,,2]
 chisqs1 <- as.numeric(apply(my_array1, 2,
                            function(x) 2*(x[,2] - x[,1]))) 
 BayesChiFit(obs = chisqs1, 
@@ -494,33 +304,23 @@ BayesChiFit(obs = chisqs1,
             N = 250,
             fit.measures = fit.measures, ms = FALSE, null_model = FALSE)
 
+'
+Posterior mean (EAP) of devm-based fit indices:
 
+      BRMSEA    BGammaHat adjBGammaHat          BMc 
+       0.021        0.996        0.994        0.995 
+'
+
+################### COMPARE#####################
 plot(chisqs, chisqs1)
+
+########################################
 
 #######################################################################
 
-## Public function
-blavFitIndices1 <- function(object, thin = 1, pD = c("loo","waic","dic"),
-                           rescale = c("devM","ppmc"),
-                           fit.measures = "all", baseline.model = NULL) {
-  
-    out <- BayesChiFit(obs = chisqs, reps = reps,
-                       nvar = object@Model@nvar, pD = fit_pd,
-                       N = blavInspect(object, 'ntotal'),
-                       Ngr = blavInspect(object, 'ngroups'),
-                       Min1 = blavInspect(object, 'options')$mimic == "EQS",
-                       ms = blavInspect(object, 'meanstructure'),
-                       rescale = rescale, fit.measures = fit.measures,
-                       null_model = null_model, obs_null = chisq_null,
-                       reps_null = reps_null, pD_null = pD_null)
-  
-  nChains <- blavInspect(object, 'n.chains')
-  out@details <- c(out@details, list(n.chains = nChains))
-  out
-}
+# IMPORTANT PRE USED FUNCTIONS
 
-
-
+#######################################################################
 
 
 BayesChiFit <- function(obs, reps = NULL, nvar, pD, N, Ngr = 1,
