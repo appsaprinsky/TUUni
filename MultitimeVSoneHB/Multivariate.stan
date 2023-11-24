@@ -16,19 +16,12 @@ parameters {
   matrix<lower=0>[6, Tt] epsilon; 
   // real COV_MATRIX[2, 2, Tt];
   corr_matrix[2] COV_MATRIX[Tt];
-  corr_matrix[2] COV_MATRIX_1[Tt];
-  corr_matrix[2] COV_MATRIX_2[Tt];
   // cholesky_factor_corr[2] COV_MATRIX[Tt];
   matrix<lower=0>[6, Tt] ly;
-  real<lower=0.5, upper=0.7> target_correlation;
 }
 
 
 model {
-  vector[2] temp_v1;
-  vector[2] temp_v2;
-  vector[2] temp_v;
-
   for (t in 1:Tt) {
     for (i in 1:N) {
       x[i,1,t] ~ normal(ly[1, t]*eta[t][i, 1], epsilon[1, t]);
@@ -38,24 +31,8 @@ model {
       x[i,5,t] ~ normal(ly[5, t]*eta[t][i, 2], epsilon[5, t]);
       x[i,6,t] ~ normal(ly[6, t]*eta[t][i, 2], epsilon[6, t]);
       //eta[t][i,1:2] ~ multi_normal(mu_0, multiply_lower_tri_self_transpose(COV_MATRIX[t]));   
-      //eta[t][i,1:2] ~ multi_normal(mu_0, COV_MATRIX[t]); 
-      temp_v[1] = eta[t][i,1];
-      temp_v[2] = eta[t][i,2];
-      if (t > 1){
-        //temp_v[1] = target_correlation * eta[t-1][i,1] + sqrt(1-target_correlation^2)*eta[t][i,1];
-        //temp_v[2] = target_correlation * eta[t-1][i,2] + sqrt(1-target_correlation^2)*eta[t][i,2];
-        temp_v1[1] = target_correlation * eta[t-1][i,1] + sqrt(1-target_correlation^2)*eta[t][i,1]; //eta[t-1][i,1];
-        temp_v1[2] = eta[t][i,1];
-        temp_v1 ~ multi_normal(mu_0, COV_MATRIX_1[Tt]);
-        temp_v2[1] = target_correlation * eta[t-1][i,2] + sqrt(1-target_correlation^2)*eta[t][i,2]; //eta[t-1][i,2];
-        temp_v2[2] = eta[t][i,2];
-        temp_v2 ~ multi_normal(mu_0, COV_MATRIX_2[Tt]);
-
-        //eta[t-1:t][i,1] ~ multi_normal(mu_0, COV_MATRIX_1[t]);
-        //eta[t-1:t][i,2] ~ multi_normal(mu_0, COV_MATRIX_2[t]);  
-      }
+      eta[t][i,1:2] ~ multi_normal(mu_0, COV_MATRIX[t]); 
       //note: use cholesky for computational reasons later
-      //temp_v ~ multi_normal(mu_0, COV_MATRIX[t]);
     }
   }
   

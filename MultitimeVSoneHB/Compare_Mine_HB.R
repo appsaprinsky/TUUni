@@ -1,5 +1,8 @@
+###########################################
+# HB
+###########################################
 # https://discourse.mc-stan.org/t/specification-of-bayesian-sem-models-with-a-data-augmentation-approach/19208
-setwd("/Users/admin/Desktop/Research Project/CODE/TUUni")
+setwd("/Users/admin/Desktop/Research Project/CODE/TUUni/MultitimeVSoneHB")
 library(loo)
 library(dplyr)
 library(blavaan) # standard package
@@ -21,21 +24,13 @@ epsilon <- rmvnorm(N,sigma=diag(6))
 lambda <- matrix(c(1,1,1,0,0,0,
                    1,0,0,1,1,1),6,2,byrow=F) # misspecify lambda -> 1 where a zero is (one of them)
 x <- eta%*%t(lambda)+epsilon #observed data
-x <- scale(x)
+# x <- scale(x)
 target_correlation_1 <- 0.6
 target_correlation_2 <- 0.6
 
-###########################################
-# generate real data new DATA
-###########################################
 
-# original_series <- rnorm(1000)
-# target_correlation <- 0.6
-# independent_series <- rnorm(1000)
-# new_series <- target_correlation * original_series + sqrt(1 - target_correlation^2) * independent_series
-# cor(original_series, new_series)
 
-Tt <- 2 # num of Series
+Tt <- 1 # num of Series
 rows <- dim(epsilon)[1]
 cols <- dim(epsilon)[2]
 depth <- Tt
@@ -45,7 +40,6 @@ for (tt in 1:Tt){
   eta <- rmvnorm(N,sigma=phi)
   matrix_ETA[,,tt] <- eta[1:rows, 1:dim(phi)[2]]
   if (tt != 1){
-    # https://math.stackexchange.com/questions/446093/generate-correlated-normal-random-variables
     eta_1a <- target_correlation_1 * matrix_ETA[,,tt-1][,1] + sqrt(1 - target_correlation_1^2) * eta[,1]
     eta_2a <- target_correlation_2 * matrix_ETA[,,tt-1][,2] + sqrt(1 - target_correlation_2^2) * eta[,2]
     # print(cor(matrix_ETA[,,tt-1], matrix_ETA[,,tt]))
@@ -56,47 +50,31 @@ for (tt in 1:Tt){
   }
   epsilon <- rmvnorm(N,sigma=diag(6))
   x <- eta%*%t(lambda)+epsilon
-  x <- scale(x)  
+  # x <- scale(x)  
   matrix_X[,,tt] <- x[1:rows, 1:cols]
 }
 
 
-matrix_ETA[,1,1:2]
-lmHeight = lm(X2~0+X1, data = data.frame(matrix_ETA[,1,1:2])) #Create the linear regression
-summary(lmHeight) 
-
-
-cor(matrix_ETA[1:3,1,1], matrix_ETA[1:3,1,2])
-
-cor(matrix_ETA[,,1], matrix_ETA[,,2])
-
-cor(posterior_samples$eta[1000,2,,1],posterior_samples$eta[1000,2,,2])
-
-
-lmHeight = lm(height~age, data = ageandheight) #Create the linear regression
-summary(lmHeight)
-
-
-
-summary(matrix_ETA[,,5])
-summary(matrix_ETA[,,3])
-summary(matrix_ETA[,,1])
-dim(matrix_ETA[,,1])
 
 
 mu_0 <- array(0, dim = c(2))
 x_mean <-array(0, dim = c(6, Tt))
 cov_x_DATA <- array(0, dim = c(Tt, 6, 6)) 
 dim(mu_0)
-  
+
 for (tt in 1:Tt){
   x_mean[,tt] <- colMeans(matrix_X[,,tt])
   cov_x_DATA[tt,,] <- cov(matrix_X[,,tt])
   
 }
-cor(matrix_ETA[1:20,1:2,1])
+
+''
+cov(x)
+cov_x_DATA[,,]
+''
+
 # dim(matrix_X) <- c(1000, 6, 15)
-data2 <- list(
+data2_N <- list(
   Tt=Tt,
   N=N,
   x=matrix_X,
@@ -106,93 +84,49 @@ data2 <- list(
 )
 
 dim(matrix_X)
-
-cov_x_DATA[1:2,1,1]
 getwd()
-setwd("/Users/admin/Desktop/Research Project/CODE/TUUni")
-rt1 <- stanc("current_model_short_HB.stan") #proper & high      (b1pop,.1)
-sm1 <- stan_model(stanc_ret = rt1, verbose=FALSE)
+rt1_N <- stanc("Multivariate.stan") #proper & high      (b1pop,.1)
+sm1_N <- stan_model(stanc_ret = rt1_N, verbose=FALSE)
 
 
-fit1 <- sampling(sm1, data=data2,chains=1,iter=1500,warmup=500)
+fit1_N <- sampling(sm1_N, data=data2_N,chains=1,iter=1500,warmup=500)
 
-# stan_rhat(fit1,bins=60)
-posterior_samples <- extract(fit1)
-# ddd <- data.frame(posterior_samples$log_lik_sat)
-posterior_samples$COV_MATRIX_1[1000,1:2,1:2]
+posterior_samples_N <- extract(fit1_N)
 
-posterior_samples$COV_MATRIX_1[1000,1,,]
-posterior_samples$COV_MATRIX_2[1000,1,,]
-posterior_samples$COV_MATRIX[1000,1,,]########## THIS IS HOW COV MATIX LOOKS LIKE posterior_samples$COV_MATRIX[1000,1,,]
-
-
-cor(posterior_samples$eta[1000,,,1],posterior_samples$eta)
-
-posterior_samples$COV_MATRIX[1000,1:2,1:2,1]
-
-posterior_samples$target_correlation
-
-cor(matrix_ETA[,2,2],matrix_ETA[,2,1])
-
-
-posterior_samples$corr_M
 ################### Measures for STAN #####################
-dim(posterior_samples$log_lik)
 
-big_my_array_1 <- array(0, dim = c(1000*Tt, 1, 2))
+
+big_my_array_1_N <- array(0, dim = c(1000*Tt, 1, 2))
 for (i in 1:Tt){
   print(i)
   print(1000*(i-1)+1)
   print(1000*i)
-  my_array1 <- Create2DimMatrix(posterior_samples$log_lik[,,i], posterior_samples$log_lik_sat[,,i], 1000)
-  big_my_array_1[(1000*(i-1)+1):(1000*i),,] <- my_array1
+  my_array1 <- Create2DimMatrix(posterior_samples_N$log_lik[,,i], posterior_samples_N$log_lik_sat[,,i], 1000)
+  big_my_array_1_N[(1000*(i-1)+1):(1000*i),,] <- my_array1
 }
 
-big_my_array_1
-
+'
+[1] -2557.899
+[1] -2512.573
+'
 fit.measures = "all"
 
-chisqs1 <- as.numeric(apply(big_my_array_1, 2,
+chisqs1_N <- as.numeric(apply(big_my_array_1_N, 2,
                             function(x) 2*(x[,2] - x[,1]))) 
-a1 <- BayesChiFit(obs = chisqs1, 
-                  nvar = 6, pD = loo(fit1)$p_loo[1],
+a1_N <- BayesChiFit(obs = chisqs1_N, 
+                  nvar = 6, pD = loo(fit1_N)$p_loo[1],
                   N = 250,
                   fit.measures = fit.measures, ms = FALSE, null_model = FALSE)
 
+
 '
 Posterior mean (EAP) of devm-based fit indices:
 
       BRMSEA    BGammaHat adjBGammaHat          BMc 
-         NaN        0.907        1.039        0.857 
+       0.201        0.914        0.741        0.868 
+
 '
 
-out2 <- c(mean(a1@indices$BRMSEA),
-          mean(a1@indices$BGammaHat),
-          mean(a1@indices$adjBGammaHat),
-          mean(a1@indices$BMc))
-
-
-
-
-
-
-big_my_array_1[4500:5000,,]
-
-
-
-
-rrrrr <- 1
-posterior_samples$COV_MATRIX[1000,rrrrr,1:2,1:2]
-cov(matrix_ETA[,,rrrrr], matrix_ETA[,,rrrrr])
-
-
-
-posterior_samples$eta[1000,1:5,250,]
-
-
-dim(posterior_samples$eta)
-
-dim(posterior_samples$COV_MATRIX)
 
 
 
@@ -205,53 +139,9 @@ dim(posterior_samples$COV_MATRIX)
 
 
 
-
-
-
-
-
-########################################### ###################################
-########################################### ###################################
-########################################### ###################################
-########################################### ###################################
-########################################### ###################################
-# BLAVAN COMPARISON
-########################################### ###################################
-########################################### ###################################
-########################################### ###################################
-########################################### ###################################
-########################################### ###################################
-
- ###########################################
-# data analysis with real data
 ###########################################
-# 1st model 
-model <- '
-eta1 =~ V1+V2+V3
-eta2 =~ V4+V5+V6
-'
-
-res1 <- bsem(model, data=as.data.frame(x),#target="jags",    
-             burnin = 500, n.chains = 1, sample = 1000, 
-             mcmcfile = "model1", std.lv = TRUE,
-             dp=dpriors(lambda="normal(0,1)"))#,itheta="dt(0,1/5,1)[sd]"))
-res1 
-summary(res1)
-blavFitIndices(res1)
-
-
-#?dpriors
-
-'
-Posterior mean (EAP) of devm-based fit indices:
-
-      BRMSEA    BGammaHat adjBGammaHat          BMc 
-       0.017        0.998        0.994        0.996 
-'
-
-#########################################################
-#########################################################
-
+# generate real data
+###########################################
 ###########################################################
 # STAN
 
@@ -267,83 +157,17 @@ data2 <- list(
   zero_vector = c(0,0,0,0,0,0)
 )
 getwd()
-setwd("/Users/admin/Desktop/Research Project/CODE/TUUni")
-rt1 <- stanc("current_model_short_HB.stan") #proper & high      (b1pop,.1)
+rt1 <- stanc("HB.stan") #proper & high      (b1pop,.1)
 sm1 <- stan_model(stanc_ret = rt1, verbose=FALSE)
 
 
 fit1 <- sampling(sm1, data=data2,chains=1,iter=1500,warmup=500)
-
-stan_rhat(fit1,bins=60)
-
-
-
-params <- c("epsilon","sigma","ly")
-parlog <- c("log_lik")
-
-
-print(fit1,pars=params)
-print(fit1,pars=parlog)
-print(fit1,pars="curr_cov_ll")
-print(fit1,pars="mu_together_ml")
-
-
-#stan_trace(fit1,"b1")
-#stan_dens(fit1,"b1",separate_chains =T)
-
-#extract parameters for model-implied covariance matrix
-par0 <- c(paste0("curr_cov_ll[",1:6,",",1,"]"),
-          paste0("curr_cov_ll[",1:6,",",2,"]"),
-          paste0("curr_cov_ll[",1:6,",",3,"]"),
-          paste0("curr_cov_ll[",1:6,",",4,"]"),
-          paste0("curr_cov_ll[",1:6,",",5,"]"),
-          paste0("curr_cov_ll[",1:6,",",6,"]"))
-
-a2 <- as.data.frame(fit1)
-cov.stan <- matrix(apply(a2[,par0],2,mean),6,6)
-cov.emp <- cov(x)
-cov.blav <- res1@Fit@Sigma.hat[[1]]
-
-round(cov.emp-cov.stan,3)
-round(cov.blav-cov.stan,3)
 
 # $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
 
 #model_real_stan <- stan(model_code = stan_model_code, iter = 1500, verbose = FALSE, data=stan_data, chains=1, warmup = 500 )
 posterior_samples <- extract(fit1)
-
-ddd <- data.frame(posterior_samples$log_lik)
-sum(ddd[1,])
-ll2 <- mean(rowSums (ddd))
-ll1 <- mean(res1@external$samplls[,,1])
-
-#qqplot(rowSums(dddalt),rowSums(ddd))
-
-
-qqplot(rowSums(ddd), res1@external$samplls[,,1])
-abline(0,1)
-
-plot(density(rowSums(ddd)),xlim=c(min(rowSums(ddd)),max(rowSums(ddd))),ylim=c(0,.2))
-par(new=T)
-plot(density(res1@external$samplls[,,1]),xlim=c(min(rowSums(ddd)),max(rowSums(ddd))),ylim=c(0,.2),lty=2)
-abline(v=c(mean(rowSums(ddd)),mean(res1@external$samplls[,,1])))
-
-
-
-ddd1 <- data.frame(posterior_samples$log_lik_sat)
-sum(ddd1[1,])
-rowSums (ddd1)
-
-
-# $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-#"
-#Please run first # IMPORTANT PRE USED FUNCTIONS
-#
-#Create2DimMatrix
-#BayesChiFit
-#"
-
 
 
 ################### Measures for BLAVAAN #####################
@@ -352,66 +176,34 @@ rescale = c("devm","ppmc")
 fit.measures = "all"
 
 
-chisqs <- as.numeric(apply(res1@external$samplls, 2,
-                           function(x) 2*(x[,2] - x[,1])))   
-fit_pd <- fitMeasures(res1, paste0('p_', pD))              
-#fitMeasures(res1)
-#'
-#      npar       logl        ppp        bic        dic      p_dic       waic     p_waic    se_waic      looic 
-#    13.000  -2495.968      0.541   5063.664   5017.958     13.011   5018.188     13.005     56.695   5018.271 
-#     p_loo     se_loo margloglik 
-#    13.047     56.699         NA 
-#'
-
-a0 <- BayesChiFit(obs = chisqs, 
-            nvar = 6, pD = fit_pd[1],
-            N = 250,
-            fit.measures = fit.measures, ms = FALSE, null_model = FALSE)#@details
-
-
-out1 <- c(mean(a0@indices$BRMSEA),
-          mean(a0@indices$BGammaHat),
-          mean(a0@indices$adjBGammaHat),
-          mean(a0@indices$BMc))
-
-
-#'
-#Posterior mean (EAP) of devm-based fit indices:
-#
-#      BRMSEA    BGammaHat adjBGammaHat          BMc 
-#       0.017        0.998        0.994        0.996 
-#'
-
 ########################################
 
 ################### Measures for STAN #####################
 loo(fit1)$p_loo[1]
 
 my_array1 <- Create2DimMatrix(posterior_samples$log_lik, posterior_samples$log_lik_sat, 1000)
+'
+[1] -2557.808
+[1] -2512.573
+'
 chisqs1 <- as.numeric(apply(my_array1, 2,
                            function(x) 2*(x[,2] - x[,1]))) 
 a1 <- BayesChiFit(obs = chisqs1, 
             nvar = 6, pD = loo(fit1)$p_loo[1],
             N = 250,
             fit.measures = fit.measures, ms = FALSE, null_model = FALSE)
+'
+Posterior mean (EAP) of devm-based fit indices:
 
-out2 <- c(mean(a1@indices$BRMSEA),
-          mean(a1@indices$BGammaHat),
-          mean(a1@indices$adjBGammaHat),
-          mean(a1@indices$BMc))
+      BRMSEA    BGammaHat adjBGammaHat          BMc 
+       0.206        0.914        0.729        0.868 
+'
 
 
-#'
-#Posterior mean (EAP) of devm-based fit indices:
-#
-#      BRMSEA    BGammaHat adjBGammaHat          BMc 
-#       0.021        0.996        0.994        0.995 
-#'
 
-################### COMPARE#####################
-qqplot(chisqs, chisqs1)
-abline(0,1)
-########################################
+
+
+
 
 #######################################################################
 
