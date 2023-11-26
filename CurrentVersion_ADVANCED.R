@@ -35,7 +35,7 @@ target_correlation_2 <- 0.6
 # new_series <- target_correlation * original_series + sqrt(1 - target_correlation^2) * independent_series
 # cor(original_series, new_series)
 
-Tt <- 2 # num of Series
+Tt <- 6 # num of Series
 rows <- dim(epsilon)[1]
 cols <- dim(epsilon)[2]
 depth <- Tt
@@ -56,11 +56,12 @@ for (tt in 1:Tt){
   }
   epsilon <- rmvnorm(N,sigma=diag(6))
   x <- eta%*%t(lambda)+epsilon
-  x <- scale(x)  
+  x <- scale(x)
   matrix_X[,,tt] <- x[1:rows, 1:cols]
 }
 
-
+var(matrix_X[,1,1:3])
+cor(matrix_X[,1,1:3])
 matrix_ETA[,1,1:2]
 lmHeight = lm(X2~0+X1, data = data.frame(matrix_ETA[,1,1:2])) #Create the linear regression
 summary(lmHeight) 
@@ -69,6 +70,10 @@ summary(lmHeight)
 cor(matrix_ETA[1:3,1,1], matrix_ETA[1:3,1,2])
 
 cor(matrix_ETA[,,1], matrix_ETA[,,2])
+
+
+cor(matrix_ETA[,1,1:2])
+
 
 cor(posterior_samples$eta[1000,2,,1],posterior_samples$eta[1000,2,,2])
 
@@ -114,25 +119,42 @@ rt1 <- stanc("current_model_short_HB.stan") #proper & high      (b1pop,.1)
 sm1 <- stan_model(stanc_ret = rt1, verbose=FALSE)
 
 
-fit1 <- sampling(sm1, data=data2,chains=1,iter=1500,warmup=500)
+fit1 <- sampling(sm1, data=data2,chains=1,iter=6500,warmup=500)
 
 # stan_rhat(fit1,bins=60)
 posterior_samples <- extract(fit1)
 # ddd <- data.frame(posterior_samples$log_lik_sat)
 posterior_samples$COV_MATRIX_1[1000,1:2,1:2]
 
-posterior_samples$COV_MATRIX_1[1000,1,,]
+posterior_samples$COV_MATRIX_1[1000,,,]
 posterior_samples$COV_MATRIX_2[1000,1,,]
 posterior_samples$COV_MATRIX[1000,1,,]########## THIS IS HOW COV MATIX LOOKS LIKE posterior_samples$COV_MATRIX[1000,1,,]
+posterior_samples$COV_MATRIX[1000,,]
+posterior_samples$COV_MATRIX[1000,1:2,,1:2]
+posterior_samples$eta[1000,,]
 
 
-cor(posterior_samples$eta[1000,,,1],posterior_samples$eta)
+
+cor(posterior_samples$eta[1000,,],posterior_samples$eta)
+matrix_ETA[,1:2,1]
+
+cor(posterior_samples$eta[1000,,],matrix_ETA[,1:2,1])
+    
+posterior_samples$error_1[1000,,,]
+
+posterior_samples$eta_TEMP
+
+posterior_samples$ly[1000,,]
+
 
 posterior_samples$COV_MATRIX[1000,1:2,1:2,1]
 
 posterior_samples$target_correlation
 
-cor(matrix_ETA[,2,2],matrix_ETA[,2,1])
+cor(matrix_ETA[,2,6],matrix_ETA[,2,5])
+posterior_samples$MULTI_epsilon[1000,,]
+
+posterior_samples$ly[1000,,]
 
 
 posterior_samples$corr_M
