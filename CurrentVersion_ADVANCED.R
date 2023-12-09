@@ -20,6 +20,8 @@ eta <- rmvnorm(N,sigma=phi)
 epsilon <- rmvnorm(N,sigma=diag(6))
 lambda <- matrix(c(1,1,1,0,0,0,
                    1,0,0,1,1,1),6,2,byrow=F) # misspecify lambda -> 1 where a zero is (one of them)
+lambda <- matrix(c(1,1,1,0,0,0,
+                   0,0,0,1,1,1),6,2,byrow=F) # misspecify lambda -> 1 where a zero is (one of them)
 x <- eta%*%t(lambda)+epsilon #observed data
 x <- scale(x)
 target_correlation_1 <- 0.6
@@ -66,14 +68,13 @@ matrix_ETA[,1,1:2]
 lmHeight = lm(X2~0+X1, data = data.frame(matrix_ETA[,1,1:2])) #Create the linear regression
 summary(lmHeight) 
 
-
+cor(epsilon,rmvnorm(N,sigma=diag(6)))
 cor(matrix_ETA[1:3,1,1], matrix_ETA[1:3,1,2])
 
 cor(matrix_ETA[,,1], matrix_ETA[,,2])
-
+cor(matrix_X[,,1], matrix_X[,,2])
 
 cor(matrix_ETA[,1,1:2])
-
 
 cor(posterior_samples$eta[1000,2,,1],posterior_samples$eta[1000,2,,2])
 
@@ -124,6 +125,13 @@ fit1 <- sampling(sm1, data=data2,chains=1,iter=1500,warmup=500)
 # stan_rhat(fit1,bins=60)
 posterior_samples <- extract(fit1)
 # ddd <- data.frame(posterior_samples$log_lik_sat)
+
+
+posterior_samples$beta
+
+
+
+
 posterior_samples$COV_MATRIX_1[1000,1:2,1:2]
 
 posterior_samples$COV_MATRIX_1[1000,,,]
