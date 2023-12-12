@@ -4,8 +4,6 @@ getwd()
 # Number of time points: Nt = 5, 10, 25
 # For each condition run R = 100 samples
 
-
-
 library(mvtnorm)
 library(matrixcalc)
 library(rstan)
@@ -15,7 +13,6 @@ options(mc.cores = parallel::detectCores())
 
 
 ######## FUNCTIONS IMPORTANT
-
 BayesChiFit <- function(obs, reps = NULL, nvar, pD, N, Ngr = 1,
                         ms = TRUE, Min1 = FALSE,
                         rescale = c("devM","ppmc"), fit.measures = "all",
@@ -131,12 +128,6 @@ Create2DimMatrix <- function(object_ll, object1_ll_sat, dim=1000){
   my_array1
 }
 
-
-# data_generate <- function(x, y) {
-#   result <- x * y
-#   return(result)
-# }
-
 ###################################
 
 
@@ -146,25 +137,14 @@ Create2DimMatrix <- function(object_ll, object1_ll_sat, dim=1000){
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
+###################################
+###    SIMULATION STARTS HERE
+###################################
 
 person_size_SIMULATE <- c(25, 50, 75) # N
 time_point_SIMULATE <- c(5, 10, 25) # Nt
 run_Samples_SIMULATE <- 100
 model_TRUE_MISS <- c(0, 0.3) 
-
-
 
 ##### For shorter check
 person_size_SIMULATE <- c(75) # N
@@ -182,10 +162,6 @@ global_SIMULATE_Info <- data.frame(
   adjBGammaHat = numeric(),
   BMc = numeric()
 )
-
-
-# (75 and 10 ) is ok
-# (75 and 10 ) is ok
 
 is_positive_def <- FALSE
 rowCheck <- 1
@@ -269,7 +245,7 @@ for (model_TRUE_MISS in model_TRUE_MISS_SIMULATE){
         adjBGammaHat = numeric(),
         BMc = numeric()
       )
-      for (SAMPLING in 1:run_Samples_SIMULATE){ ### All Samples run
+      for (SAMPLING in 1:run_Samples_SIMULATE){ ### All Samples run !!!!!!!!!!!!!!!!!
         fit1 <- sampling(sm1, data=data1)
         posterior_samples <- extract(fit1)
         my_array1 <- Create2DimMatrix(posterior_samples$log_lik, posterior_samples$log_lik_sat, nrow(logliki))
