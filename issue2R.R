@@ -1,3 +1,26 @@
+# Load the semPlot package
+library(semPlot)
+
+# Create a simple SEM model (example)
+model <- 'AcademicProcrastination =~ Item1 + Item2 + Item3 + ... + Item25'
+
+semPaths(model, layout = "tree")
+# Plot the SEM model
+semPaths(model, what = "std", layout = "tree")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ###########################################
 # Set Up for Issue
 ###########################################
