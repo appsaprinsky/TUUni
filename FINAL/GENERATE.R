@@ -153,6 +153,13 @@ model_TRUE_MISS_SIMULATE  <- c(0, 0.3)
 6*7*2 # 84
 
 
+
+person_size_SIMULATE <- c(250, 500, 1000) # N
+time_point_SIMULATE <- c(2, 3, 4, 5, 10) # Nt
+model_TRUE_MISS_SIMULATE  <- c(0.3) 
+
+
+
 # population parameters
 # constant across conditins
 phi0 <- diag(2)*.5+.5 # cov(eta)
