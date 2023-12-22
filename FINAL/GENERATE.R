@@ -133,20 +133,24 @@ Create2DimMatrix <- function(object_ll, object1_ll_sat, dim=1000){
 rt1 <- stanc("dsem02.stan") 
 sm1 <- stan_model(stanc_ret = rt1, verbose=FALSE)
 
-36*2
 
-person_size_SIMULATE <- c(25, 50, 75, 150, 300, 500) # N
+person_size_SIMULATE <- c(25, 50, 75, 100, 250, 500, 1000) # N
 time_point_SIMULATE <- c(1, 2, 3, 4, 5, 10, 15) # Nt
 model_TRUE_MISS_SIMULATE  <- c(0, 0.3) 
-person_size_SIMULATE <- c(25, 50, 75, 100, 250, 500, 1000) # N
-time_point_SIMULATE <- c(4, 5, 10) # Nt
-person_size_SIMULATE <- c(250, 500, 1000) # N
-person_size_SIMULATE <- c(1000) # N
-time_point_SIMULATE <- c(5, 10) # Nt
 
-# ##### SHORTER #####
-# person_size_SIMULATE <- c(25, 50, 75) # N
-# time_point_SIMULATE <- c(2, 3, 4) # Nt
+#Concrete Run Conditions: Long Time Run
+person_size_SIMULATE <- c(1000) 
+time_point_SIMULATE <- c(1, 2, 3, 4, 5, 10, 15) # Nt
+model_TRUE_MISS_SIMULATE  <- c(0, 0.3) 
+
+1*7*2 # 14
+
+#Concrete Run Conditions: NS
+person_size_SIMULATE <- c(25, 50, 75, 100, 250, 500) # N
+time_point_SIMULATE <- c(1, 2, 3, 4, 5, 10, 15) # Nt
+model_TRUE_MISS_SIMULATE  <- c(0, 0.3) 
+
+6*7*2 # 84
 
 
 # population parameters
