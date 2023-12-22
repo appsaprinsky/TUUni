@@ -136,13 +136,10 @@ sm1 <- stan_model(stanc_ret = rt1, verbose=FALSE)
 36*2
 
 person_size_SIMULATE <- c(25, 50, 75, 150, 300, 500) # N
-time_point_SIMULATE <- c(1, 2, 3, 4, 5, 10, 15) # Nt
+time_point_SIMULATE <- c(2, 3, 4, 5, 10, 15) # Nt
 model_TRUE_MISS_SIMULATE  <- c(0, 0.3) 
-person_size_SIMULATE <- c(25, 50, 75, 100, 250, 500, 1000) # N
-time_point_SIMULATE <- c(4, 5, 10) # Nt
-person_size_SIMULATE <- c(250, 500, 1000) # N
-person_size_SIMULATE <- c(1000) # N
-time_point_SIMULATE <- c(5, 10) # Nt
+person_size_SIMULATE <- c(25, 50, 75, 100) # N
+time_point_SIMULATE <- c(2, 3, 4, 5, 10) # Nt
 
 # ##### SHORTER #####
 # person_size_SIMULATE <- c(25, 50, 75) # N
@@ -193,12 +190,10 @@ for (model_TRUE_MISS in model_TRUE_MISS_SIMULATE){
       eta <- array(NA,c(N,Nt,2))
       y   <- array(NA,c(Nt,N,6))
       eta[,1,] <- rmvnorm(N,mu0,phi0)
-      if (Nt>=2){
-        for(j in 2:Nt){#j<-2
-          zeta <- rmvnorm(N,c(0,0),phi0*(1-ar0^2)) 
-          eta[,j,1] <- mu0[1] + ar0[1]*eta[,j-1,1] + zeta[,1]
-          eta[,j,2] <- mu0[2] + ar0[2]*eta[,j-1,2] + zeta[,2]
-        }
+      for(j in 2:Nt){#j<-2
+        zeta <- rmvnorm(N,c(0,0),phi0*(1-ar0^2)) 
+        eta[,j,1] <- mu0[1] + ar0[1]*eta[,j-1,1] + zeta[,1]
+        eta[,j,2] <- mu0[2] + ar0[2]*eta[,j-1,2] + zeta[,2]
       }
       
       for(j in 1:Nt){
@@ -213,10 +208,8 @@ for (model_TRUE_MISS in model_TRUE_MISS_SIMULATE){
       }
       y0 <- data.frame(y0)
       cnom <- paste0("y",1:6,"t",1)
-      if (Nt>=2){
-        for(j in 2:Nt){
-          cnom <- c(cnom,paste0("y",1:6,"t",j))
-        }
+      for(j in 2:Nt){
+        cnom <- c(cnom,paste0("y",1:6,"t",j))
       }
       colnames(y0)<-cnom
       x_cov  <- cov(y0)
