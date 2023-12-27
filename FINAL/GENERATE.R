@@ -155,10 +155,12 @@ model_TRUE_MISS_SIMULATE  <- c(0, 0.3)
 
 
 person_size_SIMULATE <- c(250, 500, 1000) # N
-time_point_SIMULATE <- c(2, 3, 4, 5, 10) # Nt
-model_TRUE_MISS_SIMULATE  <- c(0.3) 
+time_point_SIMULATE <- c(25, 50, 75, 100, 250, 500) # Nt
+model_TRUE_MISS_SIMULATE  <- c(0) 
 
-
+person_size_SIMULATE <- c(25, 50, 75, 100, 250, 500) # N
+time_point_SIMULATE <- c(15 ) # Nt
+model_TRUE_MISS_SIMULATE  <- c(0, 0.3) 
 
 # population parameters
 # constant across conditins
@@ -274,5 +276,4 @@ for (model_TRUE_MISS in model_TRUE_MISS_SIMULATE){
     }
   }
 }
-
 

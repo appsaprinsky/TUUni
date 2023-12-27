@@ -7,20 +7,23 @@ library(readr)
 library(dplyr)
 library(writexl)
 
-# Assuming your data frame is named 'rounded_data_frame'
-write_xlsx(rounded_data_frame, "output_file.xlsx")
-
 
 data1 <- read_csv("run1.csv")
 data2 <- read_csv("run2.csv")
 data3 <- read_csv("run3.csv")
 data4 <- read_csv("run4.csv")
+data5 <- read_csv("run5.csv")
+data6 <- read_csv("run6.csv")
+data7 <- read_csv("run7.csv")
 
 
 
 data_new<-merge(data1, data2, all = TRUE)
 data_new<-merge(data_new, data3, all = TRUE)
 data_new<-merge(data_new, data4, all = TRUE)
+data_new<-merge(data_new, data5, all = TRUE)
+data_new<-merge(data_new, data6, all = TRUE)
+data_new<-merge(data_new, data7, all = TRUE)
 
 data_new
 
@@ -66,6 +69,6 @@ write_xlsx(round(df %>% filter( ModelTorF == 0.3) %>% filter( TimePoint == 10), 
 
 write_xlsx(round(df %>% filter( ModelTorF == 0.3) %>% filter( TimePoint == 15), 2), "output/03_15.xlsx")
 
-
+write.csv(df, file = "final_combined.csv", row.names = FALSE) 
 
 
