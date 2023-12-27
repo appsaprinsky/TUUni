@@ -102,3 +102,34 @@ Create4graphs(data, 7, "BMc" )
 
 
 
+
+Create5graphs <- function(data_MAIN, final_column_num, final_column_name_str){
+  
+  BRMSEA_data <- data_MAIN#[,c(1,2,3,final_column_num)]
+  BRMSEA_TM <- BRMSEA_data# %>% filter( ModelTorF == 0)
+  
+  
+  columns_to_plot <- c("BRMSEA", "BGammaHat", "adjBGammaHat", "BMc")
+  
+  # Create a list to store plots
+  plots_list <- list()
+  
+  # Loop through each column and create a plot
+  for (column in columns_to_plot) {  
+  
+    my_plot1 <-ggplot(BRMSEA_TM, aes_string(x = "PersonSize", y= column, color = "as.factor( TimePoint)")) +
+      geom_line() +
+      facet_wrap(~ ModelTorF, scales = "free_y", nrow = 3, ncol = 2) +
+      labs(x = "PersonSize", y = column, color = "TimePoint", title = paste(column, "For True Model", sep = " ") ) +
+      theme_minimal() +
+      theme(plot.title = element_text(hjust = 0.5))
+    
+    plots_list[[column]] <- my_plot1
+  }
+  my_plot1 <- do.call(gridExtra::grid.arrange, plots_list)
+  
+  ggsave("ALL_ONE.jpg", plot = my_plot1, width = 8, height = 6, units = "in")
+}
+
+Create5graphs(data, 4, "BRMSEA" )
+
